@@ -1,0 +1,34 @@
+\begin{figure*}[t]
+  \textbf{\footnotesize \sys diagnostic (\texttt{bpfix} text output)}
+  \begin{lstlisting}[style=bpfix,breaklines=true,
+      emph={[1]pkt},emphstyle={[1]\color{lstgood}\bfseries},
+      emph={[2]scalar},emphstyle={[2]\color{lstbad}\bfseries},
+      linebackgroundcolor={%
+        \ifnum\value{lstnumber}=10 \color{lsthl}\fi}]
+error[BPFIX-E006]: verifier-visible compiler lowering hides the required proof
+  = class: lowering_artifact
+  = confidence: medium
+  = diagnostic: supported, help: repair_hint, span: exact_pc
+  = next action: provenance
+  --> prog.c:270
+   |
+263 | if (ipv4_hdr)
+    | ------------- nearby source context for pointer provenance
+267 | if (udph + sizeof(struct udphdr) > data_end)
+    | -------------------------------------------- verifier state changes from pkt to scalar before the rejected access
+270 | dst_port = __constant_ntohs(((struct udphdr *)udph)->dest);
+    | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ rejected here: verifier sees a scalar where a pointer is required
+   |
+   = verifier[229]: R5 invalid mem access 'scalar'
+   = note: nearest BPF instruction pc 37
+   = note: parsed 60 verifier state snapshots
+   = note[lowering]: compiler-lowered control flow hides an established packet-pointer proof
+   = required proof: preserve a verifier-recognized pointer type at the operation that requires a pointer
+help: Preserve pointer provenance across the failing path, or rederive the pointer from a checked base immediately before dereferencing it.
+help: Keep the checked packet pointer derivation in the same verifier-visible path as the dereference, or rederive it from a checked base immediately before use.
+help: Avoid integer casts or arithmetic that turn the pointer into a scalar before the access.
+help: Recompute the pointer from a verifier-tracked base after scalar manipulation.
+  \end{lstlisting}
+  \caption{The \sys diagnostic for the rejection of Figure~\ref{fig:motivating} (Stack Overflow 53136145, kernel-6.15.11), rendered by \texttt{bpfix}. The primary span at line~270 marks the rejected access the terminal message named; the highlighted related span at line~267 marks the loss point where \texttt{R5} changes from the packet pointer \texttt{pkt(off=34,r=42)} to a scalar; the header names the required proof and attributes the loss to the compiler. The \texttt{lowering\_artifact} class and \texttt{medium} confidence are the best-effort attribution of \S\ref{sec:attribution}; the spans are read from the verifier's printed states.}
+  \label{fig:diagnostic}
+\end{figure*}

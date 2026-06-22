@@ -1,0 +1,198 @@
+%%%%%%%%%%%%Outline%%%%%%%%%%%%%%%%%%
+% \section{An Empirical Study of Verifier Rejections}
+% Section thesis: the verifier's rejection log under-determines the
+% developer's bug and fix in three measurable ways.
+
+%%%
+% message<this section measures what a rejection tells about the fix and what it leaves out>
+% this section measures what a rejection tells about the fix and what it leaves out
+% 2.1 describes how the verifier produces a rejection
+% 2.2 builds and labels a corpus of real rejections
+% 2.3 characterizes the bugs behind the rejections
+% 2.4 measures where the rejection falls short of a fix
+
+%% \subsection{The eBPF Verifier's Safety Checks}
+
+%%%
+% message<the verifier proves every program safe before it runs>
+% the verifier proves every program safe before the program runs
+% an eBPF program runs in kernel context where one unsafe op can crash the kernel
+% the kernel must guarantee safety before a program runs
+% it cannot do so by running the program, since that runs the unverified code
+% the verifier checks the program statically
+% at load time it analyzes the bytecode along every path
+% a program loads only when every path is proved safe
+
+%%%
+% message<a rejection is the first precondition the verifier cannot prove>
+% a rejection is the first precondition the verifier cannot prove
+% to prove a path safe the verifier checks one precondition per operation
+% the verifier explores one path at a time, tracking abstract values
+% the tracked values let the verifier decide each precondition
+% when it cannot prove a precondition it rejects there
+
+%%%
+% message<a program faces many preconditions, so a rejection can be any of them>
+% a program must satisfy many distinct preconditions
+% a rejection can come from any one of these preconditions
+% kernel 6.15.11 can reject at 454 sites in 16 categories of safety property
+% 89 are verifier-internal, leaving 365 a developer's program can trigger
+
+%% \subsection{\emph{bpf-bench}: A Labeled Rejection Corpus}
+
+%%%
+% message<we build a corpus of real rejections to study what developers hit>
+% to study rejections developers actually hit, we assemble bpf-bench
+% the corpus draws on 936 candidate reports from four sources
+% to compare on equal footing we replay every candidate in one environment
+% we keep a candidate only when it is rejected and a log is captured
+% 235 of 936 reproduce and form bpf-bench (table)
+% the rest are dropped: specific environment or not verifier errors
+% reproducing favors easy cases, so the corpus skews toward simpler rejections
+
+%%%
+% message<we hand-label each case for the ground truth the rejection lacks>
+% we hand-label each case for the ground truth the rejection lacks
+% for every rejection we read the faulty source and its fix
+% from that reading we record four labels
+% the responsibility labels agree with prior labels for 95.7%
+% we treat these labels as reliable
+% property and mechanism labels still need an independent check
+
+%% \subsection{Characterizing the Bugs Behind Rejections}
+
+%%%
+% message<the bug is usually a genuine developer mistake with a small fix>
+% the bug behind a rejection is usually a genuine developer mistake with a small fix
+% from the labels we characterize each bug by layer, source error, and fix
+
+%%%
+% message<191 of 235 rejections are bugs in the developer's own code>
+% developer-code bugs are 191 of the 235 rejections
+% we read each rejection's source and fix to assign the responsible layer (table)
+% in the other 44 the code is correct: compiler, environment, or verifier
+% the rest of the subsection examines the developer bugs
+
+%%%
+% message<most developer bugs are specific to the eBPF model>
+% most developer bugs are specific to the eBPF model, beyond a generic checklist
+% we classify each developer bug with a property label and a mechanism label
+% the two labels answer different questions, so a bug needs both
+% the figure reads one rejection through the two labels (figure)
+% the property names which proof failed, a memory bound
+% the mechanism names what the developer wrote, an index past capacity
+% all 191 bugs fall into 12 recurring mechanisms (table)
+% most mechanisms encode a bpf-specific contract
+% only null and out-of-bounds map onto a general taxonomy like CWE
+% together those two cover 34 of the 191 bugs
+
+%%%
+% message<most fixes are small once the developer knows what to change>
+% once the developer knows what to change, most fixes are small
+% for each bug we record what the fix changes
+% to gauge size, where a commit exists we count the lines it edits
+% the fix actions group into a few recurring kinds
+% the median measurable fix edits six lines
+% a long tail edits far more
+
+%% \subsection{Measuring the Log's Diagnostic Gaps}
+
+%%%
+% message<the report is low-level and falls short of a fix in three ways>
+% the verifier reports a rejection in its own low-level terms
+% the report is a terminal message with an errno
+% a verbose mode adds the per-instruction abstract state
+% the errno is too coarse, EINVAL covering 47%
+% even the message and the state fall short of a fix in three ways
+
+%%%
+% message<one message maps to many bugs, so it cannot identify the bug>
+% the message alone cannot tell which bug occurred, one message maps to many
+% we group the 235 rejections by message template
+% for each template we count the mechanisms its cases cover
+% the 235 rejections carry 167 distinct messages
+% normalizing registers and offsets reduces them to 82 templates
+% 15 of the 82 templates each cover several mechanisms
+% the scalar template alone covers 28 cases across nine mechanisms (table)
+
+%%%
+% message<the same message hides which layer is at fault>
+% the message hides which layer is at fault
+% the message carries no field for the responsible layer
+% a source bug, a compiler artifact, and a false positive print the same line
+% the figure pairs a real source bug with a compiler artifact (figure)
+% the source bug is fixed in the program
+% the compiler artifact is fixed by working around the lowering
+% reading the wrong layer is costly: a misread false positive weakens a correct check
+
+%%%
+% message<the flagged operation is the fix site in only a quarter of cases>
+% the fix sits at the flagged operation in only 25.5% of cases
+% we compare the flagged operation with the line the developer edits
+% in 22.9% the fix lies elsewhere, such as other code or a restructured branch
+% the message stays at register or state level for 82.6%
+% a source location appears in only 13 of 235
+% to reach the fix the developer must translate down then find the fix site
+
+%%%
+% message<the log leaves three gaps between rejection and repair>
+% the message leaves bug, layer, and fix site for the developer
+% a usable diagnosis must supply all three
+%%%%%%%%%%%%Outline%%%%%%%%%%%%%%%%%%
+
+\section{An Empirical Study of Verifier Rejections}
+\label{sec:study}
+
+This section measures what a verifier rejection tells a developer about fixing a program, and what the rejection leaves out. We first describe how the verifier produces a rejection (\S\ref{sec:study:verifier}). We then build and label a corpus of real rejections (\S\ref{sec:study:corpus}). From the corpus we characterize the bugs behind the rejections (\S\ref{sec:study:bugs}). Finally, we measure where the rejection falls short of a fix (\S\ref{sec:study:gap}).
+
+\subsection{The eBPF Verifier's Safety Checks}
+\label{sec:study:verifier}
+
+The verifier proves every program safe before the program runs. An eBPF program runs in kernel context, where a single unsafe operation can crash or corrupt the kernel. The kernel must guarantee safety before a program runs. The kernel cannot get that guarantee by running the program, because running unverified code is itself the danger. The verifier checks the program statically. At load time the verifier analyzes the bytecode along every path the program can take. A program loads only when the verifier has proved every path safe.
+
+A rejection is the first safety precondition the verifier cannot prove. To prove a path safe, the verifier checks one precondition at each operation, such as a memory access that must stay within a proven bound. The verifier explores one path at a time, tracking an abstract value for every register and stack slot. The tracked values let the verifier decide each precondition. When the verifier cannot prove an operation's precondition, the verifier rejects the program at that operation.
+
+A program must satisfy many distinct preconditions. A rejection can come from any one of these preconditions. In kernel 6.15.11 the verifier can reject at 454 distinct sites, grouped into 16 categories of safety property. Of the 454 sites, 89 are internal errors a developer cannot fix, leaving 365 that a developer's program can trigger.
+
+\subsection{\emph{bpf-bench}: A Labeled Rejection Corpus}
+\label{sec:study:corpus}
+
+To study rejections that developers actually hit, we assemble \emph{bpf-bench}, a corpus of real verifier rejections reproduced in one fixed environment. The corpus draws on 936 candidate reports from four sources: Stack Overflow questions, GitHub issues, GitHub fix commits, and kernel selftests. To compare rejections on equal footing, we replay every candidate in one environment, rebuilding the program and loading it into kernel 6.15.11 with clang 18 at log level 2. We keep a candidate only when the verifier rejects the rebuilt program and the harness captures a log. As Table~\ref{tab:corpus-outcomes} reports, 235 of the 936 candidates reproduce and form \emph{bpf-bench}. The rest are dropped because they need a specific environment or are not verifier errors. Because reproducing a rejection favors the cases that rebuild easily, the corpus skews toward simpler rejections.
+
+\input{tables/sec-2-corpus-outcomes}
+
+We hand-label each case to recover the ground truth the rejection does not carry. For every rejection we read the faulty source and its fix. From that reading we record four labels: the responsible layer, the violated safety property, the source mechanism, and the kind of fix. The responsible-layer labels agree with the corpus's prior labels for 95.7\% of cases. We treat these labels as reliable. The property and mechanism labels are a first pass that still needs an independent reliability check.
+
+\subsection{Characterizing the Bugs Behind Rejections}
+\label{sec:study:bugs}
+
+Across \emph{bpf-bench}, the bug behind a rejection is usually a genuine developer mistake with a small fix. From the corpus labels we characterize each bug by which layer must change, how the source went wrong, and what the fix changes.
+
+\noindent\textbf{Assigning responsibility.} Genuine bugs in the developer's own code account for 191 of the 235 rejections. We read each rejection's source and fix to assign the layer that must change for the program to pass, shown in Table~\ref{tab:responsibility}. In the other 44, the program's code is already correct: the compiler lowered it wrongly, the environment supplies a wrong type, helper, or metadata, or the verifier rejects a safe program on its own. The rest of this subsection examines the developer bugs.
+
+\input{tables/sec-2-responsibility}
+
+\noindent\textbf{Classifying the bug.} Most developer bugs are specific to the eBPF model, beyond the reach of a generic memory-safety checklist. We classify each developer bug with two labels: the safety property the verifier could not prove, and the source mechanism that left the property unmet. Because the two labels answer different questions, a bug needs both. Figure~\ref{fig:capacity} reads one rejection through the two labels. The property names which proof failed, a memory bound. The mechanism names what the developer wrote, an index one past the object's capacity. All 191 developer bugs fall into 12 recurring mechanisms, listed in Table~\ref{tab:mechanisms}. Most mechanisms encode a contract specific to BPF, such as proving a packet bound or pairing a dynptr with its lifetime. Of the 12, only missing null checks and out-of-bounds indexing map onto a general defect taxonomy such as CWE. Together these two mechanisms cover 34 of the 191 bugs.
+
+\input{tables/sec-2-mechanisms}
+
+\input{figures/sec-2-capacity}
+
+\noindent\textbf{Characterizing the fix.} Once the developer knows what to change, most fixes are small. For each developer bug we record what the fix changes. To gauge a fix's size, where a fix commit is available we count the lines it edits. The fix actions group into a few recurring kinds, led by adding a bounds check, reordering a check, and adding a null check. On the cases with a measurable commit, the median fix edits six lines. A long tail edits far more.
+
+\subsection{Measuring the Log's Diagnostic Gaps}
+\label{sec:study:gap}
+
+The verifier reports a rejection in its own low-level terms. The report is a terminal message with an errno. A verbose mode adds the abstract state at each instruction. The errno is too coarse to separate causes, since \texttt{EINVAL} alone covers 47\% of the verifier's error returns. Even the message and the per-instruction state fall short of a fix in three ways.
+
+\noindent\textbf{Identifying the bug.} The message alone cannot tell a developer which bug occurred, because one message maps to many distinct bugs. We group the 235 rejections by message template. For each template we count the source mechanisms its cases cover. The 235 rejections carry 167 distinct messages. Normalizing registers and offsets reduces these messages to 82 templates. Of the 82 templates, 15 each cover more than one mechanism. The most frequent template alone covers 28 cases across nine mechanisms, as Table~\ref{tab:fanout} shows.
+
+\input{tables/sec-2-fanout}
+
+\noindent\textbf{Attributing responsibility.} The message also hides which layer is at fault. The message carries no field for the responsible layer. A source bug, a compiler artifact, and a verifier false positive can all print the same line. Figure~\ref{fig:packet} pairs a source bug and a compiler artifact under one such message. The source bug is fixed in the program. The compiler artifact is fixed by working around the lowering. Reading the wrong layer is costly: a developer who treats a verifier false positive as a source bug weakens a check that was doing its job.
+
+\input{figures/sec-2-packet}
+
+\noindent\textbf{Locating the fix.} The fix sits at the operation the message flags in only 25.5\% of cases. We compare the flagged operation with the line the developer actually edits. In 22.9\% the fix lies elsewhere, such as in other code or a restructured branch. The message stays at the register or state level for 82.6\% of cases. A source location appears in only 13 of the 235 messages. To reach the fix, a developer must translate the message down to source and then search for the real fix site.
+
+Across the three gaps, the message leaves the bug, the responsible layer, and the fix site for the developer to recover. A usable diagnosis must supply all three.

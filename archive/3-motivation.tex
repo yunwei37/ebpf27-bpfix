@@ -1,0 +1,120 @@
+%%%%%%%%%%%%Outline%%%%%%%%%%%%%%%%%%
+
+% ==== 3.0 Motivation opening ====
+%%%
+% message<the developer must work out the repair, the fix and the layer, and the message determines neither>
+% the trace records the reasoning, but the developer is handed only the terminal message
+% to act the developer must work out the repair: the fix and the layer
+% the fix follows from why the needed safety property is absent, where the proof broke
+% the property is never established, or established then lost at a merge or in lowering
+% the layer is the source, compiler, verifier, or environment
+% the message usually determines neither, and recovering them is hard, common, and unaddressed
+
+% ==== 3.1 Diagnosing a Rejection Is Hard ====
+%%%
+% message<a real packet-parsing program is rejected with a one-line message>
+% a real rejection shows where the difficulty lies
+% the program runs on each received packet
+% the program branches on IPv4 or IPv6
+% after the branch it derives a UDP pointer and reads a port
+% the verifier rejects the program at load
+% the message reports a scalar where a packet pointer is required
+%%%
+% message<the read is reached on two paths, a packet pointer on one and a scalar on the other, and no line says why>
+% the message locates the read, so the hard part is why its register is a scalar
+% udph is register R5 in the output
+% the source bounds-checks the packet before the read, so the read looks correct
+% the verifier reaches the read on two paths: pkt accepted on one, scalar 40 rejected on a later one
+% the trace states both outcomes but never says why the later path leaves R5 a scalar
+% recovering it means comparing R5 at the two occurrences and tracing the scalar 40's origin
+%%%
+% message<the message fits three accounts equally and points to none>
+% with the scalar traced, the responsible layer is still unclear
+% the message fits three accounts: a missing source check, an over-strict verifier, or a compiler artifact
+% the best-supported account is the compiler artifact, an uncertain hand-assigned label, citing alden2024llvm
+% the message itself cannot point to any of the three
+
+% ==== 3.2 Measuring Whether the Message Determines the Repair ====
+%%%
+% message<method: group rejections by message and count the fixes and layers each needs, holding sys's label out>
+% to test if the 3.1 case is typical, we measure whether the message determines the repair
+% bpfix-bench reproduces 235 such rejections from stack overflow, github, and selftests
+% each is rebuilt and rejected on one pinned kernel-6.15.11 clang-18 environment
+% grouping by the normalized message yields 83 distinct messages
+% the grouping reads only the message text and holds sys's root-cause label out
+% holding the label out keeps a message from inheriting the label the measurement tests
+% per message we count the distinct fixes its cases needed
+% we also count the distinct layers they changed, among source, compiler, verifier, environment
+% the counts rest on hand-assigned labels, validity assessed in the evaluation
+%%%
+% message<across the corpus the message commonly determines neither the fix nor the layer>
+% across the corpus the message commonly determines neither the fix nor the layer
+% when cases under one message need many fixes, the message cannot say which source change to make
+% 16 of 83 messages need more than one fix
+% those 16 cover 126 of 235 rejections, just over half
+% the scalar message alone needs 14 fixes across 28 cases, a lower bound from the catch-all codebook
+% the layer is just as open
+% 7 of 83 messages cross more than one layer, covering 40 percent
+%%%
+% message<one message covers both a real bug and a false positive, so separating them needs the discarded reasoning>
+% the packet message marks a real source bug in some cases and a false positive in others
+% the false-positive cases still forced rewriting working source to pass the verifier
+% the message text alone cannot separate a false positive from a real bug
+% only the per-instruction reasoning separates the two
+% that reasoning shows whether the fact was established then lost, or never established
+% recovering either answer means replaying that reasoning, which the rejection discards
+
+% ==== 3.3 Limitations of Existing Tools ====
+%%%
+% message<message-level tools work on top of the terminal message at the source line>
+% existing tools work on top of the terminal message after the verifier emits it
+% pretty verifier matches the message to a catalog and maps it to a source line
+% pretty verifier restates the error in plainer words
+% recovering why the fact was lost is beyond such message matching
+% the responsible layer likewise lies beyond it
+%%%
+% message<other work avoids rejections by changing how the program is generated>
+% another line of work avoids rejections by changing how the program is generated
+% synthesis regenerates a program until it passes
+% safe-language runtimes replace the verifier, so no rejection arises
+% these approaches help a developer get a passing program
+% a rejection that already occurred still stays unexplained
+%%%
+% message<both tool families stop at the message; recovering why and the layer needs the discarded reasoning, which sys does>
+% both families of tools stop at what the message says
+% recovering why and naming the layer need the verifier's discarded per-instruction reasoning
+% \sys recovers that reasoning from the log, described next
+
+%%%%%%%%%%%%Outline%%%%%%%%%%%%%%%%%%
+
+\section{Motivation}
+\label{sec:motivation}
+
+A level-two trace records the reasoning behind a rejection, yet a developer is handed only the terminal message. To act on it, the developer must work out the \emph{repair}: the \emph{fix}, the source change that makes the program pass, and the \emph{layer} that must change. The fix follows from why the safety property the verifier needed is absent, which is where the proof broke. The source may never establish that property, or may establish it and then lose it at a branch merge or in the compiler's lowering. The layer that must change is the source, the compiler, the verifier, or the execution environment. The terminal message usually determines neither the fix nor the layer, and recovering them is hard, is common, and is unaddressed by existing tools.
+
+\subsection{Diagnosing a Rejection Is Hard}
+\label{sec:diagnosis}
+
+A real rejection shows where the difficulty lies (Figure~\ref{fig:motivating}). A developer writes an XDP program, which the kernel runs on each received packet. The program branches on whether the packet carries an IPv4 or an IPv6 header. After the branch the program derives a pointer to the UDP header and reads the destination port. The verifier rejects the program at load. The terminal message, \texttt{R5 invalid mem access 'scalar'}, reports that the read dereferences a scalar where a packet pointer is required.
+
+The terminal message locates the failing read, so the difficulty is understanding why its register holds a scalar. In the verifier output the pointer \texttt{udph} is register \texttt{R5}. The source bounds-checks the packet before that read, so the read looks correct. The verifier reaches the read on two paths (Figure~\ref{fig:motivating}b): on the first, \texttt{R5} is the packet pointer \texttt{pkt(off=34,r=42)} and the read is accepted, while on a later path reached through \texttt{from 31 to 34}, \texttt{R5} is the scalar~40 and the read is rejected. The trace states both outcomes but never states why this later path leaves \texttt{R5} a scalar. Recovering the cause means comparing \texttt{R5} at the read's two occurrences and tracing the scalar~40 to its origin.
+
+Even with the scalar traced to that path, the rejection leaves the responsible layer unclear. The terminal message fits three accounts equally well: a missing check in the source, an over-strict verifier, or a compiler artifact. The best-supported account is the compiler artifact, the bytecode for the merged pointer, which the verifier can no longer prove is a packet pointer~\cite{alden2024llvm}. That account rests on a hand-assigned and uncertain label, and the terminal message itself cannot point to any of the three.
+
+\subsection{Measuring Whether the Message Determines the Repair}
+
+To test whether the case in \S\ref{sec:diagnosis} is typical, we measure across real rejections whether the terminal message determines the repair (Table~\ref{tab:rejection-classes}). \emph{bpfix-bench} reproduces 235 such rejections drawn from Stack Overflow questions, GitHub issues and commits, and kernel selftests. Each rejection is rebuilt and rejected again on one pinned kernel-6.15.11 and clang-18 environment. We group the rejections by their terminal message after normalizing register numbers and byte offsets, which yields 83 distinct messages. The grouping reads only the message text and holds \sys's own root-cause label out. Holding the label out keeps a message from inheriting the label the measurement is meant to test. For each message we then count the distinct hand-labeled fixes its cases needed. We also count the distinct layers they changed, among the source, the compiler, the verifier, and the environment. These fix and layer counts rest on hand-assigned labels, whose validity we assess in \S\ref{sec:evaluation}.
+
+\looseness=-1 Across the corpus, the terminal message commonly determines neither the fix nor the layer. When the cases under one message need many different fixes, the message cannot tell the developer which source change to make. Of the 83 messages, 16 need more than one fix. Those 16 cover 126 of the 235 rejections, just over half. The scalar message alone needs 14 distinct fixes across its 28 cases, a lower bound because the fix codebook ends in a catch-all that merges the remaining edits. The layer is just as open. Seven of the 83 messages cross more than one layer, covering 40 percent of the rejections.
+
+The packet-access message goes further: in some of its cases it marks a genuine source bug, and in others a verifier false positive. The false-positive cases still forced the developer to rewrite working source to pass the verifier. The message text alone gives no way to separate a false positive from a real bug. Only the per-instruction reasoning behind the rejection separates the two. That reasoning shows whether the safety fact was established and then lost, or never established at all. Recovering either answer means replaying that reasoning, which the rejection discards.
+
+\input{tables/sec-3-rejection-classes}
+
+\subsection{Limitations of Existing Tools}
+
+\looseness=-1 Existing tools for verifier errors work on top of the terminal message after the verifier emits it. Pretty Verifier, the closest such tool, matches the message against a fixed catalog and maps it to a source line using debug information~\cite{rizza2025design}. Pretty Verifier then restates the error in plainer language. Recovering why the safety fact was lost along the trace is beyond such message matching. The responsible layer likewise lies beyond it.
+
+Another line of work avoids rejections by changing how the program is generated. Program-synthesis tools regenerate a program from a specification until it passes the verifier~\cite{zheng2024kgent}. Safe-language runtimes replace the verifier, so no rejection arises~\cite{jia2025rex}. These approaches help a developer get a program that passes. A rejection that has already occurred still stays unexplained.
+
+\looseness=-1 Both families of tools, those that match the message and those that change the program, stop at what the message says. Recovering why the safety fact was lost and naming the responsible layer need the per-instruction reasoning the verifier computed and then discarded. The next section describes how \sys recovers that reasoning from the rejection log.

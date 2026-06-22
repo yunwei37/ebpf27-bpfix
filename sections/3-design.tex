@@ -1,0 +1,132 @@
+%%%%%%%%%%%%Outline%%%%%%%%%%%%%%%%%%
+
+% ==== Overview (section opening, no subsection) ====
+%%%
+% message<a rejection is a failed proof, and \sys localizes the break the symptom hides>
+% a rejection is a failed proof: the verifier needed a fact it could no longer prove
+% the verifier computed that proof attempt per instruction and then discarded the attempt
+% the developer is left with only the symptom of the running rejection
+% \sys recovers the attempt and localizes the break
+% localizing the break moves the diagnosis from the symptom to the cause
+%%%
+% message<\sys works from the log alone, with a principled core and a weaker heuristic>
+% \sys reads only the log: no re-run, no source, no separate model
+% localizing the break is the principled core, grounded in the verifier's own states
+% naming the responsible layer is a separate weaker heuristic the log does not record
+% the figure shows the architecture: recover, localize, attribute, render
+% the running rejection threads through these steps to the diagnostic figure
+
+% ==== 4.1 Recovering the Required Proof ====
+%%%
+% message<localizing the break first needs the one failed fact, recovered as an obligation>
+% localizing the break first needs to know which fact to follow
+% \sys isolates the verifier region and locates the rejected instruction
+% an ordered table of patterns matches the message, the first match names the obligation
+% on the running rejection the match names pointer provenance, BPFIX-E006, and the rejected load
+%%%
+% message<\sys instantiates the obligation into the exact failed fact>
+% \sys instantiates the obligation with the trace's concrete values, fixing the failed fact
+% on the running rejection the fixed fact is R5 holds an in-bounds packet pointer, printed as the required proof
+
+% ==== 4.2 Localizing the Proof Break ====
+%%%
+% message<\sys follows the fact through the verifier's states, and the break is the loss transition>
+% \sys follows the obligation's fact through the verifier's abstract states
+% the level-two trace prints each register's state in the encoding the figure shows
+% \sys marks where the fact was established and where it was lost
+% the break is the transition between these marks
+% on the running rejection R5 is established as a packet pointer and lost where it prints as scalar 40
+% \sys marks the line-267 bounds check as the loss point and the line-263 branch as context
+%%%
+% message<reading the transition apart from the symptom separates a never-argued fact from a lost one>
+% reading the transition apart from the symptom separates never-established from established-then-lost
+% the two fail at one use site for opposite reasons
+% \sys reports the second as a loss point, naming the fact and the state change that dropped it
+% on the running rejection the message names only line 270 while \sys also names the line-267 transition
+%%%
+% message<reading only the log makes the loss point a witness, a deliberate trade>
+% reading only the log bounds what \sys can claim
+% the loss point is a witness that does not pin down the smallest responsible set
+% \sys scans printed states up to the rejection without separating paths or re-running
+% this bound is the deliberate price of trusting the verifier's own states
+
+% ==== 4.3 Attributing the Fault ====
+%%%
+% message<naming the layer is a separate heuristic the log does not record>
+% localizing the loss shows where and why, and the responsible layer stays open
+% the base classifier assigns the class the message implies
+% a lost fact can come from lowering or verifier conservatism, which the log does not record
+% an overlay of signals is the only source of the lowering and false-positive verdicts
+% on the running rejection a lowering signal fires and sets the lowering_artifact class
+%%%
+% message<the attribution overlay is the least reliable part, tuned on the running rejection>
+% the overlay is the least reliable part
+% 73 signals read the states, yet a false positive rests on two precision signals
+% each signal encodes a manual judgment tuned on the one public reproducer, the running rejection
+% the verdict on that rejection illustrates the output
+% the principled localization stands on the verifier's states, this layer does not
+
+% ==== 4.4 Rendering the Diagnostic ====
+%%%
+% message<\sys renders the recovered fact, loss, and layer into a compiler-style diagnostic and JSON contract>
+% \sys renders the recovered fact, its loss, and the layer into a compiler-style diagnostic shown in the figure
+% a primary span marks the rejection, related spans mark established and lost, each noting the required proof
+% the same facts populate a stable JSON contract tools consume as one machine format
+% a confidence field grades how precisely the spans map to source
+%%%
+% message<the diagnostic adds over the terminal message what the developer had to recover by hand>
+% the figure shows what the diagnostic adds over the terminal message
+% the message tells only R5 and line 270, the diagnostic adds the loss point, the lost fact, the layer, and repairs
+% producing these is the reconstruction the developer did by hand, now read from the log
+% one case shows the pipeline end to end, aggregate attribution is future work
+
+%%%%%%%%%%%%Outline%%%%%%%%%%%%%%%%%%
+
+\section{Design}
+\label{sec:design}
+
+\input{figures/sec-4-pipeline}
+
+
+
+
+
+A verifier rejection is a failed safety proof. At the rejected instruction the verifier needed a fact it could no longer establish, having computed the proof attempt instruction by instruction and then discarded it. What reaches the developer is only the symptom of the \S\ref{sec:study} rejection: \texttt{R5 invalid mem access 'scalar'} at the line-270 read. BPFix recovers the discarded
+attempt from the log and \emph{localizes the break}---the transition where the needed fact was established and then lost. Localizing the break moves the diagnosis from the symptom, where verification stopped, to the cause, where the fact was lost.
+
+% \sys reads only the rejection log: it re-runs nothing, needs no source or object, and builds no separate model of the verifier. Localizing the break is the principled core of \sys, grounded in the abstract states the verifier itself printed. Naming the responsible layer is a separate and weaker heuristic, because the log does not record which layer dropped the fact. Figure~\ref{fig:pipeline} shows the architecture, two Rust crates that recover the needed fact, localize its loss, attribute that loss, and render a diagnostic. The running rejection of \S\ref{sec:diagnosis} threads through these steps to the diagnostic in Figure~\ref{fig:diagnostic}.
+ 
+Two principles bound the design. First, BPFix reads only the rejection log: it re-runs nothing, requires no source or object file, and builds no separate model of the verifier. The verifier already simulated execution over an abstract state and printed that state under \texttt{log\_level=2}; BPFix recovers its
+reasoning rather than recomputing it. Second, the two halves of a diagnosis rest on different evidence and are reported with different confidence. Localizing the break is grounded in the abstract states the verifier itself printed, so it is the principled core of BPFix. Naming the responsible layer goes beyond what the log records---the log never says \emph{which} layer dropped a fact---so attribution is a separate, weaker heuristic that BPFix reports as best-effort.
+ 
+BPFix is implemented as two Rust crates: \texttt{bpfanalysis}, which parses the log and reconstructs the proof lifecycle, and \texttt{bpfix}, the command-line front end that renders the diagnostic. The pipeline (Figure~\ref{fig:pipeline}) has five stages: \emph{isolate} the verifier region and anchor the rejected
+instruction, \emph{classify} the terminal message into a proof obligation, \emph{reconstruct} that obligation's lifecycle from the per-instruction states, \emph{attribute} the loss to a layer, and \emph{render} a multi-span diagnostic backed by a stable machine-readable contract. The running rejection of \S\ref{sec:study} threads through these stages to the diagnostic in Figure~\ref{fig:diagnostic}.
+
+\subsection{Recovering the Required Proof}
+
+Localizing the break first requires knowing which fact to follow, because the trace holds many register facts while the rejection names only the one that failed. \sys isolates the verifier region of the interleaved log and locates the rejected instruction~\cite{linuxkernel-bpf-verifier}. An ordered table of message patterns matches the message, and the first match names the proof obligation to follow. For the running rejection the first match on \texttt{R5 invalid mem access 'scalar'} names pointer provenance and the identifier \texttt{BPFIX-E006}, and the rejected load is instruction~37, the line-270 read.
+
+\sys then instantiates that obligation with the failing concrete values, the registers, offsets, and sizes the trace reports, fixing the exact fact the verifier could not establish. For the running rejection the fixed fact is that \texttt{R5} holds an in-bounds packet pointer at the line-270 read, which the diagnostic prints as the required proof.
+
+\subsection{Localizing the Proof Break}
+
+\sys localizes the break by following the obligation's fact through the verifier's own abstract states. The level-two trace prints, after each instruction, every register's state in the encoding Figure~\ref{fig:motivating} shows, including the pointer provenance the obligation needs. Reading these states up to the rejected instruction, \sys marks where the fact was established and where it was lost. The break is the transition between these marks. For the running rejection \sys finds \texttt{R5} established as the packet pointer \texttt{pkt(off=34,r=42)} on one path and lost on the path through \texttt{from 31 to 34}, where \texttt{R5} prints as the scalar~40. \sys marks the line-267 bounds check as the loss point and the line-263 branch as provenance context.
+
+Reading the transition apart from the symptom separates a fact never established from a fact established and then lost. The two fail at the same use site for opposite reasons: the first is a source that never established the fact, the second a real change in the verifier's state, where a bound collapses or a packet pointer loses provenance after lowering~\cite{llvm-bpf-reloc}. \sys reports the second as a loss point, naming both the lost fact and the state change that dropped it. For the running rejection the terminal message names only the line-270 read, while \sys also names the line-267 transition from packet pointer to scalar, the cause the symptom hides.
+
+\looseness=-1 Reading only the log also bounds what \sys can claim. The loss point is a witness to the loss that does not pin down the smallest responsible set of instructions. \sys scans the printed states up to the rejection without separating control-flow paths and without re-running the verifier. This bound is the deliberate price of trusting the verifier's own states.
+
+\subsection{Attributing the Fault}
+\label{sec:attribution}
+
+Localizing the loss shows where a fact was lost and why, and the responsible layer stays open. A base classifier reads the rejection message and assigns the class it implies, such as a source bug or a configuration fault. A lost fact, though, can come from LLVM lowering that dropped a provable fact or from the verifier's abstract domain rejecting a fact that holds~\cite{jia2025rex}, and the log does not record which. \sys decides between these two causes with an overlay of hand-written signals over the verifier's states, the only source of its \texttt{lowering\_artifact} and \texttt{verifier\_false\_positive} verdicts. For the running rejection a lowering signal fires, and \sys sets the failure class to \texttt{lowering\_artifact} at medium confidence.
+
+\looseness=-1 This overlay is the least reliable part of \sys. Its 73 signals read states such as the tnum and the scalar range, yet a \texttt{verifier\_false\_positive} verdict rests on only two precision signals. Each signal encodes a manual judgment tuned on a single public reproducer, \texttt{stackoverflow-53136145}, which is the running rejection itself. The \texttt{lowering\_artifact} verdict on that rejection illustrates the output. The principled localization stands on the verifier's own states; this attribution layer does not.
+
+\subsection{Rendering the Diagnostic}
+
+\input{figures/sec-4-diagnostic}
+
+\sys renders the recovered fact, its loss point, and the attributed layer as a compiler-style diagnostic~\cite{becker2019compiler}, shown in Figure~\ref{fig:diagnostic} for the running rejection. A primary span marks the rejected access, and related spans mark where the fact was established and where it was lost, each with a note naming the required proof. The same facts populate a stable JSON contract that carries the failure class, the next-action family, the spans, and their evidence, so tools consume one machine-readable format. A confidence field grades how precisely the spans map to source, from an exact instruction down to the terminal message alone.
+
+Figure~\ref{fig:diagnostic} shows what the diagnostic adds over the terminal message of \S\ref{sec:diagnosis}. That message tells the developer only register \texttt{R5} and the line-270 read, while the diagnostic adds the line-267 loss point, the lost pointer-provenance fact, the compiler as the responsible layer, and four ranked repair hints. Producing these is the reconstruction the developer of \S\ref{sec:diagnosis} did by hand, now read from the log alone. This single case shows the pipeline end to end, and measuring attribution across the corpus is future work.

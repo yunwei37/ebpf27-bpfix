@@ -1,0 +1,26 @@
+\begin{table}[t]
+  \centering
+  \caption{The 12 source mechanisms behind the 191 developer bugs, each the specific source step the developer got wrong.}
+  \label{tab:mechanisms}
+  \small
+  \begin{tabular}{@{}l r@{}}
+    \toprule
+    Source mechanism & Cases \\
+    \midrule
+    Unclamped scalar used as offset or length   & 24 \\
+    Corrupted or stale dynptr object            & 23 \\
+    Packet access without a bound on every path  & 22 \\
+    Missing null check                           & 19 \\
+    Pointer type or provenance mismatch          & 16 \\
+    Unverified address dereferenced              & 16 \\
+    Index exceeds object capacity                & 15 \\
+    Context or contract misuse                   & 15 \\
+    Unpaired resource reference                  & 15 \\
+    Interrupt flag not restored in order         & 11 \\
+    Probe signature mismatched with the ABI      & 9  \\
+    Oversized or uninitialized stack buffer      & 6  \\
+    \midrule
+    Total                                        & 191 \\
+    \bottomrule
+  \end{tabular}
+\end{table}

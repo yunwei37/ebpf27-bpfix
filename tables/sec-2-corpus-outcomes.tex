@@ -1,0 +1,23 @@
+\begin{table}[t]
+  \centering
+  \caption{Outcomes for the 936 collected rejection reports. The 235 reproduced rejections form \emph{bpf-bench}; the rest are grouped by why they were excluded.}
+  \label{tab:corpus-outcomes}
+  \small
+  \begin{tabular}{@{}l r@{}}
+    \toprule
+    Outcome & Candidates \\
+    \midrule
+    Reproduced and admitted              & 235 \\
+    Not a verifier error                 & 262 \\
+    Needs a specific environment         & 197 \\
+    Selftest candidate not admitted      & 115 \\
+    Not reconstructable from a diff      & 45  \\
+    Reproduced but accepted              & 32  \\
+    Missing source                       & 31  \\
+    Missing verifier log                 & 15  \\
+    Rejected without a reported instruction & 4 \\
+    \midrule
+    Total collected                      & 936 \\
+    \bottomrule
+  \end{tabular}
+\end{table}

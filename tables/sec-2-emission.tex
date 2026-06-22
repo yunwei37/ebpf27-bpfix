@@ -1,0 +1,25 @@
+\begin{table*}[t]
+  \centering
+  \caption{How the verifier emits a rejection. At the first operation it cannot prove safe, the specific failing check writes a message and returns a negative errno; checks fire at three pipeline stages and carry different information, and the message text never carries the errno. All sites are in the pinned kernel-6.15.11 \texttt{verifier.c}.}
+  \label{tab:emission}
+  \scriptsize
+  \setlength{\tabcolsep}{3pt}
+  \begin{tabular}{@{}p{5.7cm} l l p{2.5cm} p{3.0cm}@{}}
+    \toprule
+    Message (verbatim) & Emitting site & Errno & Stage & Info carried \\
+    \midrule
+    \texttt{unreachable insn \%d} & \texttt{check\_cfg:17663} & \texttt{-EINVAL} & CFG pre-pass & insn index \\
+    \texttt{back-edge from insn \%d to \%d} & \texttt{push\_insn:17173} & \texttt{-EINVAL} & CFG pre-pass & source, target insn \\
+    \texttt{R\%d !read\_ok} & \texttt{check\_reg\_arg:3711} & \texttt{-EACCES} & do\_check / register read & reg no.\ (uninitialized) \\
+    \texttt{R\%d invalid mem access '\%s'} & \texttt{check\_mem\_access:7489} & \texttt{-EACCES} & do\_check / memory access & reg no., internal type name \\
+    \texttt{invalid access to packet, off=\%d size=\%d, R\%d(id=\%d,off=\%d,r=\%d)} & \texttt{\_\_check\_mem\_access:5618} & \texttt{-EACCES} & do\_check / packet access & off, size, reg, id, off, range \\
+    \texttt{div by zero} & \texttt{check\_alu\_op:15530} & \texttt{-EINVAL} & do\_check / ALU & (none) \\
+    \texttt{R\%d pointer arithmetic on \%s prohibited, null-check it first} & \texttt{adjust\_ptr\_min\_max\_vals:14327} & \texttt{-EACCES} & do\_check / pointer arithmetic & reg no., pointer type \\
+    \texttt{R\%d is of type \%s but \%s is expected} & \texttt{check\_reg\_type:9219} & \texttt{-EINVAL} & do\_check / type contract & reg no., actual, expected type \\
+    \texttt{Possibly NULL pointer passed to helper arg\%d} & \texttt{check\_func\_arg:9193} & \texttt{-EACCES} & do\_check / helper argument & argument no. \\
+    \texttt{Unreleased reference id=\%d alloc\_insn=\%d} & \texttt{check\_reference\_leak:11067} & \texttt{-EINVAL} & do\_check / reference discipline & ref id, allocating insn \\
+    \texttt{the call stack of \%d frames is too deep} & \texttt{check\_func\_call:10285} & \texttt{-E2BIG} & do\_check / subprogram call & frame count \\
+    \texttt{BPF program is too large. Processed \%d insn} & \texttt{do\_check:19444} & \texttt{-E2BIG} & complexity budget & processed insn count \\
+    \bottomrule
+  \end{tabular}
+\end{table*}

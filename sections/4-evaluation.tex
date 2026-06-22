@@ -1,0 +1,76 @@
+%%%%%%%%%%%%Outline%%%%%%%%%%%%%%%%%%
+
+% ==== opening: the three research questions ====
+%%%
+% message<the evaluation asks three questions: localization, attribution, and repair usefulness>
+% we evaluate \sys with three questions
+% RQ1 asks whether \sys localizes the proof break better than trusting the rejected line
+% RQ2 asks whether \sys assigns the correct failure class and beats a message-level baseline
+% RQ3 asks whether the structured diagnostic helps a developer repair the program
+
+% ==== Setup ====
+%%%
+% message<bpfix-bench is a replay-disciplined corpus with independent tiered labels and three baselines>
+% we evaluate on bpfix-bench, 235 rejections reproduced under one pinned environment
+% the cases come from stack overflow 86, selftests 85, github commits 46, and issues 18
+% labels are hand-assigned from separate evidence, the classifier playing no part, so they stay independent
+% ground truth is tiered: 235 reproduce, 130 have an instruction-level root-cause index, 9 are adjudicated
+% we compare against three baselines: last-line localizer, message dictionary, and raw-log repair
+
+% ==== RQ1: Localizing the proof break ====
+%%%
+% message<the rejected line diverges from the cause per class, so the last-line baseline misses the hard classes; \sys's accuracy is pending>
+% a useful localizer must point at where the proof broke, which can differ from the rejected instruction
+% the table measures per class how often the root-cause index differs from the rejected index over 130 cases
+% the two differ for 19% source bugs, 33% lowering, 3/3 false positives, 0/5 environment, gap at most 13
+% the last-line baseline localizes source bugs well but misses the hard classes
+% \sys's own localization accuracy against this baseline is pending a fresh replay capture
+
+% ==== RQ2: Attributing the failure class ====
+%%%
+% message<\sys attributes the layer with heuristic signals; the measured comparison to a message baseline is pending>
+% attribution assigns each rejection the layer that must change, scored over 235 cases against the message dictionary
+% \sys reads 73 hand-written signals, and the false-positive verdict rests on only two precision signals, the weakest part
+% the message dictionary cannot recover lowering artifacts or false positives, which share messages with source bugs
+% the measured accuracy and confusion matrix are pending a fresh replay capture
+
+% ==== RQ3: Helping repair ====
+%%%
+% message<a pilot shows the structured diagnostic helps one-shot repair, reported as calibration not a benchmark>
+% to test downstream use we build bpfix-test, 40 repair cases with executable oracles
+% an oracle passes only when the candidate compiles, loads, and runs correctly
+% on an 18-case same-config pilot, raw-log repair passes 5 of 18 and structured-diagnostic repair 18 of 18
+% we report this as a calibration pilot, one model, one run, no trimmed-log or cross-model baseline, full suite future work
+
+% ==== Threats to validity ====
+%%%
+% message<pending captures, small samples, single-adjudicator labels, a tuned pilot, and corpus skew bound the results>
+% the two pending results need every case's replay log, of which only one is in the artifact
+% the hard classes carry few cases, reported with raw counts
+% the adjudicated labels rest on a single adjudicator with agreement not yet measured
+% the repair pilot reuses the tuned case and one model, so it is a calibration signal
+% the distance metric covers only the 130 same-numbering cases, and the source-bug skew bounds the rarer classes
+
+%%%%%%%%%%%%Outline%%%%%%%%%%%%%%%%%%
+
+\section{Evaluation}
+\label{sec:evaluation}
+
+We evaluate \sys with three research questions:
+\begin{itemize}
+  \item \textbf{RQ1 (localization).} Does \sys localize the instruction where the proof breaks more accurately than a baseline that trusts the rejected line?
+  \item \textbf{RQ2 (attribution).} Does \sys assign the correct failure class, and does it beat a message-level baseline on the hard classes?
+  \item \textbf{RQ3 (usefulness).} Does \sys's structured diagnostic help a developer repair the program?
+\end{itemize}
+
+\noindent\textbf{Setup.} We evaluate on \emph{bpfix-bench}, a corpus of 235 verifier rejections that each build, load, are rejected, and capture a level-two trace under one pinned environment (kernel 6.15.11 and clang 18.1.3). The cases come from Stack Overflow (86), kernel selftests (85), GitHub commits (46), and GitHub issues (18). Each case's root-cause instruction and taxonomy class are hand-assigned from separate evidence, with the \sys classifier playing no part, so the labels stay independent of the tool they evaluate. Ground truth is tiered: all 235 reproduce as artifacts, 130 carry an instruction-level root-cause index on the replay numbering, and 9 carry adjudicated class labels. We compare \sys against three baselines: a last-line localizer that returns the rejected instruction, a message dictionary that maps the terminal message to a class, and one-shot repair from the raw verifier log.
+
+\noindent\textbf{RQ1: Localizing the proof break.} A useful localizer must point at where the proof broke, which can differ from the rejected instruction. Table~\ref{tab:rejection-cause-gap} measures, per class, how often the labeled root-cause instruction differs from the rejected instruction over the 130 instruction-localizable cases. The two differ for 19\% of source bugs and 33\% of lowering artifacts, for all 3 verifier false positives, and for none of the 5 environment cases, and the gap reaches at most 13 instructions. The last-line baseline therefore localizes source bugs well but misses the hard classes, where the rejected line and the cause carry different classes. \sys's own localization accuracy against this baseline, scored as exact and within-$k$ root-cause hits, is pending a fresh replay capture.
+
+\input{tables/sec-5-cause-gap}
+
+\noindent\textbf{RQ2: Attributing the failure class.} Attribution assigns each rejection the layer that must change, scored against the hand-assigned label over all 235 cases and compared to the message dictionary. \sys reads 73 hand-written signals over the rich trace to make this call, and the false-positive verdict rests on only two precision signals, so attribution is the weakest part of the system. The message dictionary cannot recover the lowering-artifact and false-positive classes, since they share terminal messages with source bugs. The measured comparison, an accuracy and per-class confusion matrix, is pending a fresh replay capture, because the per-case replay logs the scorer needs are not yet in the artifact.
+
+\noindent\textbf{RQ3: Helping repair.} To test whether the structured diagnostic helps downstream, we build \emph{bpfix-test}, a suite of 40 repair cases with executable oracles. An oracle passes a candidate only when it compiles, loads past the verifier, and returns the correct result under a packet or helper run. On an 18-case same-config pilot with one open model, one-shot repair from the raw verifier log passes 5 of 18, and from the \sys structured diagnostic 18 of 18. We report this as a calibration pilot, with one model, one run, and no trimmed-log or cross-model baseline, and we leave the full 40-case suite to future work.
+
+\noindent\textbf{Threats to validity.} The two pending results, \sys's localization accuracy and the attribution confusion matrix, both need the per-instruction replay log of every case, and only one such log is in the artifact, so we will produce them from a fresh kernel-6.15.11 replay capture. The hard classes carry few cases, so we report them with raw counts. The 9 adjudicated labels rest on a single adjudicator, and inter-annotator agreement is not yet measured. The repair pilot reuses the case \sys was tuned on and one model, so it is a calibration signal, and a held-out benchmark is future work. The instruction-distance metric is defined only on the 130 cases that share the replay numbering, and the corpus's skew toward source bugs, 194 of 235, bounds what the rarer classes can show.

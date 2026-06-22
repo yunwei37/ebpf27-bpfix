@@ -1,0 +1,46 @@
+%%%%%%%%%%%%Outline%%%%%%%%%%%%%%%%%%
+%%%
+% message<three lines bear on \sys; \sys takes a rejection log and returns the break, the why, and a best-effort layer>
+% three lines bear on \sys, listed from the eBPF domain outward
+% each line differs on the input it consumes or the output it produces
+% \sys takes a rejection log the kernel emitted and returns the broken instruction, why the fact was lost, and a best-effort layer
+%%%
+% message<eBPF work targets safety or the verifier and measures the pain, but none diagnoses a rejection from its log>
+% prior eBPF tooling answers whether a program is safe; explaining why is left to the developer
+% one line re-proves safety offline (PREVAIL), never reading a rejection log
+% a second line audits the verifier's range and tnum operators, finding unsoundness and proving the latest sound
+% another effort finds verifier logic bugs that let it accept unsafe programs
+% a third line removes the verifier via safe Rust or synthesis
+% a fourth line optimizes the bytecode before verification
+% a fifth isolates at runtime or splits safety between verifier and runtime checks
+% a further line measures the problem: rejections are hard to read and force rewriting working code
+% these tools decide, audit, replace, harden, or document the difficulty
+% none replays the rejection log to localize and explain the break; layer attribution stays a best-effort prototype
+%%%
+% message<diagnosis tools read facts the checker owns or reword its message; \sys recovers below-source state from a log it did not produce>
+% diagnosis tools exist outside eBPF but read facts the checker built
+% type-error diagnosis localizes the source from constraints or facts the checker produced
+% surveys document why raw compiler messages are unhelpful
+% Pretty Verifier maps the error to a source line and explains it, from source, debug info, and the log
+% these read facts the checker owns or reword its message; none reconstructs the abstract-state lifecycle
+% \sys recovers the abstract state the log carries from a log it did not produce
+% that state sits below the source after LLVM lowering, where the lowering-artifact class originates
+%%%
+% message<localization and proof-explanation techniques each need an input \sys lacks; \sys works from one rejection log>
+% the pinpoint-or-explain techniques predate eBPF but each needs an input \sys lacks
+% spectrum localization correlates with test failures, needing many runs and a suite
+% program slicing extracts a value's dependences, needing the dependence graph
+% unsat-core extraction works from a solver's structured search artifacts such as theory lemmas
+% \sys works from a single rejection log, localizing the break and explaining why
+% the verifier simulates over abstract state and emits no such artifact
+%%%%%%%%%%%%Outline%%%%%%%%%%%%%%%%%%
+
+\section{Related Work}\label{sec:related-work}
+
+\noindent Three lines of work bear on \sys, listed from the eBPF domain outward: eBPF safety tooling, error diagnosis for checkers, and fault localization and proof explanation. Each line differs from \sys on the input it consumes or the output it produces. \sys takes a verifier rejection log the kernel already emitted and returns the instruction where the proof broke and why the safety fact was lost there, with a best-effort label for the layer at fault among the source, the compiler, the verifier, and the execution environment.
+
+\noindent\textbf{eBPF verification and safety.} Prior eBPF tooling answers whether a program is safe; explaining why a rejected one failed is left to the developer. One line re-proves safety offline, where PREVAIL is a static analyzer that proves eBPF safety over its own abstract domain and never reads a verifier rejection log~\cite{gershuni2019simple}. A second line audits the kernel verifier itself: one effort checks its range and \texttt{tnum} operators, finding unsoundness in older kernels and proving the latest sound~\cite{vishwanathan2023verifying, vishwanathan2022sound}. Another finds verifier logic bugs that let it accept unsafe programs~\cite{sun2024validating}. A third line removes the verifier from the path, writing extensions in safe Rust~\cite{jia2025rex} or synthesizing them from natural language~\cite{zheng2024kgent}. A fourth line optimizes the bytecode before verification~\cite{xu2021synthesizing, mao2024merlin}. A fifth isolates programs at runtime~\cite{lu2024moat, zhang2024hive, lim2023unleashing, lim2024safebpf} or splits safety between the verifier and runtime checks~\cite{dwivedi2024fast}. A further line measures the problem, with empirical studies finding that verifier rejections are hard to read and push developers to rewrite working code to pass the verifier~\cite{deokar2024empirical, gbadamosi2024ebpf}. These tools decide acceptance, audit the verifier, replace it, optimize or harden the load path, or document the difficulty. None replays the verifier's own rejection log to localize where the proof broke and explain why the safety fact was lost; attributing the break to a layer remains a best-effort prototype (\S\ref{sec:design}).
+
+\noindent\textbf{Error diagnosis for compilers and checkers.} Tools that diagnose a rejection exist outside eBPF, but they read facts the checker built during its own check. Type-error diagnosis localizes the source responsible for an ill-typed program, working from the constraints or other facts the type checker itself produced~\cite{pavlinovic2014finding, zhang2014toward, lerner2007searching, seidel2017learning}. Surveys of compiler error messages document why raw diagnostics are unhelpful and motivate richer ones~\cite{becker2019compiler}. For eBPF, Pretty Verifier maps the verifier's error to a C source line and explains it in plainer terms, combining the source, the object file's debug information, and the verifier output~\cite{rizza2025design}. These tools read facts the checker owns, or reword its message, at the source level, and none reconstructs the abstract-state lifecycle a rejection log records. \sys instead recovers the abstract state the log carries, such as register types, scalar ranges, and pointer provenance~\cite{linuxkernel-bpf-verifier}, from a verifier log it did not produce. That state sits below the source language, because the proof runs on LLVM-lowered bytecode, where the lowering-artifact rejection class originates when the compiler merges branches into forms the verifier cannot analyze~\cite{llvm-bpf-reloc, alden2024llvm}.
+
+\noindent\textbf{Fault localization and proof explanation.} Techniques that pinpoint or explain a failure predate eBPF, but each needs an input \sys does not have. Spectrum-based fault localization ranks suspect statements by how their execution correlates with test failures, which needs many runs and a test suite~\cite{wong2016survey, jones2005empirical}. Program slicing extracts the statements a value depends on, which needs the program's dependence graph~\cite{weiser1981program}. Unsat-core extraction names a minimal infeasible subset of constraints, working from a declarative solver's structured search artifacts such as theory lemmas~\cite{cimatti2011computing}. \sys works from a single verifier rejection log, from which it localizes the instruction where the safety fact is lost and explains why. The kernel verifier simulates execution over an abstract state and emits no such artifact~\cite{linuxkernel-bpf-verifier, gershuni2019simple}.

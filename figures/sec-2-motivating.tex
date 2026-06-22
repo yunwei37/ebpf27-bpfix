@@ -1,0 +1,39 @@
+\begin{figure}[t]
+  \textbf{\footnotesize (a) Developer's C source}
+  \begin{lstlisting}[style=bpfix,language=C,
+      emph={udph},emphstyle={\color{lstbad}\bfseries},
+      linebackgroundcolor={%
+        \ifnum\value{lstnumber}=14 \color{lsthl}\fi}]
+if (ethertype == ETH_P_IP) {
+    ipv4_hdr = (void *)eth + ETH_HLEN;
+    ...
+} else if (ethertype == ETH_P_IPV6) {
+    ipv6_hdr = (void *)eth + ETH_HLEN;
+    ...
+}
+if (ipv4_hdr)
+    udph = (void *)ipv4_hdr + sizeof(*ipv4_hdr);
+else
+    udph = (void *)ipv6_hdr + sizeof(*ipv6_hdr);
+if (udph + sizeof(struct udphdr) > data_end)
+    return 1;
+dst_port = ...((struct udphdr *)udph)->dest;
+  \end{lstlisting}
+  \vspace{3pt}
+  \textbf{\footnotesize (b) Verifier output (log\_level=2)}
+  \begin{lstlisting}[style=bpfix,
+      emph={[1]pkt},emphstyle={[1]\color{lstgood}\bfseries},
+      emph={[2]scalar},emphstyle={[2]\color{lstbad}\bfseries},
+      linebackgroundcolor={%
+        \ifnum\value{lstnumber}=5 \color{lsthl}\fi
+        \ifnum\value{lstnumber}=6 \color{lsthl}\fi}]
+; dst_port = ... @ prog.c:270
+37: (69) r2 = *(u16 *)(r5 +2) ; ... R5=pkt(off=34,r=42)
+...
+from 31 to 34: ... R5_w=40 ...
+37: (69) r2 = *(u16 *)(r5 +2)
+R5 invalid mem access 'scalar'
+  \end{lstlisting}
+  \caption{A real \texttt{log\_level=2} trace for the rejected program (Stack Overflow 53136145, kernel-6.15.11). The \texttt{udph} read is line~14 of panel~(a); panel~(b) shows the verifier reach that read on two paths, accepting it on one and rejecting it on the other.}
+  \label{fig:motivating}
+\end{figure}

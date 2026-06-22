@@ -1,0 +1,43 @@
+\usepackage{xspace}
+\usepackage{xcolor}
+\usepackage{microtype}
+\setlength{\emergencystretch}{3em}
+\usepackage{array}
+\usepackage{tikz}
+\usetikzlibrary{arrows.meta,positioning,decorations.pathreplacing}
+\usepackage{listings}
+\usepackage{lstlinebgrd}
+
+\definecolor{lstkw}{HTML}{0033B3}
+\definecolor{lstcmt}{HTML}{6A737D}
+\definecolor{lststr}{HTML}{067D17}
+\definecolor{lstnum}{HTML}{AAAAAA}
+\definecolor{lsthl}{HTML}{FFF3C4}
+\definecolor{lstgood}{HTML}{1B7F2E}
+\definecolor{lstbad}{HTML}{C62828}
+
+\lstdefinestyle{bpfix}{%
+  basicstyle=\ttfamily\scriptsize,
+  numbers=left, numberstyle=\scriptsize\color{lstnum},
+  keywordstyle=\color{lstkw}\bfseries,
+  commentstyle=\color{lstcmt}\itshape,
+  stringstyle=\color{lststr}, showstringspaces=false,
+  frame=single, framesep=3pt, rulecolor=\color{black!25},
+  columns=fixed,
+  breaklines=true, breakatwhitespace=true,
+  numbersep=6pt,
+  xleftmargin=1.5em, xrightmargin=0.5em, aboveskip=3pt, belowskip=3pt,
+}
+
+\definecolor{lstlogbg}{HTML}{EDEFF2}
+\lstdefinestyle{bpflog}{%
+  language=bash,
+  basicstyle=\ttfamily\scriptsize,
+  backgroundcolor=\color{lstlogbg},
+  numbers=none,
+  keywordstyle=\color{lstkw}\bfseries,
+  frame=single, framesep=3pt, rulecolor=\color{black!25},
+  columns=fixed,
+  breaklines=true, breakatwhitespace=true,
+  xleftmargin=1.5em, xrightmargin=0.5em, aboveskip=1pt, belowskip=3pt,
+}

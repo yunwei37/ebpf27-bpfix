@@ -1,0 +1,36 @@
+\begin{table}[t]
+  \centering
+  \caption{The verifier's rejection surface in kernel-6.15.11. A rejection point
+  is a distinct \texttt{verifier.c} site that emits a message and returns an
+  error; the 454 points are a manual grouping into 16 classes by the safety
+  property each message concerns, and the grouping is sensitive to a few sites
+  at the class boundaries. Verifier internal bugs report a kernel-side defect
+  and rarely reach a user, so their count lies outside the developer-facing
+  rejection surface.}
+  \label{tab:error-space}
+  \small
+  \begin{tabular}{@{}l r@{}}
+    \toprule
+    Rejection class & Rejection points \\
+    \midrule
+    Verifier internal bug          & 89 \\
+    BTF, kfunc, and struct\_ops    & 63 \\
+    Reference, lock, and RCU       & 52 \\
+    Memory and pointer access      & 45 \\
+    Instruction encoding           & 39 \\
+    Type contract                  & 36 \\
+    Helper arguments               & 35 \\
+    Control flow and stack depth   & 22 \\
+    Pointer arithmetic and bounds  & 18 \\
+    Privilege and program type     & 15 \\
+    Address leak                   & 10 \\
+    Dynptr and iterator            & 10 \\
+    Value range                    & 8  \\
+    Spill and uninitialized stack  & 6  \\
+    Alignment                      & 3  \\
+    Resource limit                 & 3  \\
+    \midrule
+    Total                          & 454 \\
+    \bottomrule
+  \end{tabular}
+\end{table}

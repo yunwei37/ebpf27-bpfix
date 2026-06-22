@@ -1,0 +1,28 @@
+\begin{figure}[t]
+  \centering
+  \begin{tikzpicture}[
+    >={Latex[length=2mm]},
+    box/.style={draw=black!55, rounded corners=2pt, align=left,
+      inner sep=4pt, text width=6.0cm, font=\footnotesize},
+    io/.style={font=\footnotesize\itshape, text=black!75},
+    arr/.style={->, semithick, draw=black!55},
+    node distance=3.2mm,
+  ]
+    \node[io] (log) {verifier rejection log};
+    \node[box, below=of log] (s1)
+      {\textbf{1\quad Isolate}\\[1pt]{\scriptsize\color{black!62} strip wrappers, isolate the verifier region, anchor the rejected instruction}};
+    \node[box, below=of s1] (s2)
+      {\textbf{2\quad Classify}\\[1pt]{\scriptsize\color{black!62} match the terminal message to a \texttt{BPFIX-E} id and a proof obligation}};
+    \node[box, below=of s2] (s3)
+      {\textbf{3\quad Reconstruct lifecycle}\\[1pt]{\scriptsize\color{black!62} scan the per-instruction states for \emph{established}, \emph{lost}, and \emph{rejected} events}};
+    \node[box, below=of s3] (s4)
+      {\textbf{4\quad Attribute}\\[1pt]{\scriptsize\color{black!62} a signal overlay names the responsible layer}};
+    \node[box, below=of s4] (s5)
+      {\textbf{5\quad Render}\\[1pt]{\scriptsize\color{black!62} a multi-span diagnostic and a stable machine-readable JSON contract}};
+    \node[io, below=of s5] (diag) {structured diagnostic};
+    \foreach \a/\b in {log/s1,s1/s2,s2/s3,s3/s4,s4/s5,s5/diag}
+      \draw[arr] (\a) -- (\b);
+  \end{tikzpicture}
+  \caption{The five-stage \sys pipeline (\S\ref{sec:design}). From a verifier rejection log, \sys isolates the verifier region and anchors the rejected instruction~(1), classifies the terminal message into a proof obligation~(2), reconstructs the obligation's lifecycle from the per-instruction states~(3), attributes the loss to a layer~(4), and renders a multi-span diagnostic~(5).}
+  \label{fig:pipeline}
+\end{figure}

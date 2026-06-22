@@ -1,0 +1,14 @@
+\begin{figure}[t]
+  \begin{lstlisting}[style=bpfix,language=C,
+      linebackgroundcolor={\ifnum\value{lstnumber}=2 \color{lstbad!40}\fi}]
+// bitesize.bpf.c: targ_comm is a 16-byte global array
+for (i = 0; targ_comm[i] != '\0' && i < TASK_COMM_LEN; i++)
+    if (comm[i] != targ_comm[i])
+        return false;
+  \end{lstlisting}
+  \begin{lstlisting}[style=bpflog]
+verifier: invalid access to map value, value_size=16 off=16 size=1
+  \end{lstlisting}
+  \caption{An off-by-one on a 16-byte global array (bcc \texttt{bitesize.bpf.c}). The loop reads an array element before it checks the index against the array length, so the verifier explores the one-past-the-end index and reads a byte beyond the array.}
+  \label{fig:capacity}
+\end{figure}

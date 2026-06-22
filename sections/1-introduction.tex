@@ -1,0 +1,69 @@
+%%%%%%%%%%%%Outline%%%%%%%%%%%%%%%%%%
+
+%%%
+% message<the message leaves the bug, the layer, and the fix site for the developer>
+% eBPF runs production networking, security, observability in the kernel
+% every program must clear a static verifier
+% a rejection returns one message naming only the register and the access
+% to act the developer must recover what the message omits: the bug, the layer, the fix site
+% the layer is the source, compiler, verifier, or environment
+% the message settles none of the three
+% the developer repairs by trial and error
+
+%%%
+% message<on bpf-bench the message under-determines the bug, the layer, and the fix site>
+% on bpf-bench the message falls short on all three
+% one message names many bugs: scalar covers 28 across nine mechanisms, 15 of 82 fan out
+% the message carries no field for the responsible layer
+% those 28 split into 23 source bugs, four compiler artifacts, one environment fault
+% the flagged instruction is the fix site in only 25.5%, source line in only 13 of 235
+% existing tools stop at the message
+% matchers restate the message
+% synthesis and safe-runtime tools regenerate or replace the program
+
+%%%
+% message<a rejection is an incomplete proof the log still holds, so localizing the break is principled>
+% the message hides reasoning the verifier already computed
+% a rejection is a safety proof built per instruction but not completed
+% at the rejected instruction the verifier cannot prove a fact and prints the symptom
+% at log_level=2 the verifier prints each register's state after every instruction
+% \sys reads that log, recovers the discarded proof, and localizes the break
+% reading the break from the verifier's own states makes localization principled
+% naming the layer goes beyond the log
+% \sys treats the layer as a separate, weaker heuristic
+
+%%%
+% message<\sys is a log-only userspace diagnostic with two evaluated claims, attribution best-effort>
+% \sys is a userspace CLI reading only the log, a compiler-style diagnostic over JSON
+% two claims drive the evaluation
+% first, the labeled responsible line lies at most 13 instructions from the rejected line
+% second, the diagnostic helps a downstream model repair in one shot
+% in a pilot one model repairs 5 of 18 from the raw log and 18 of 18 from the diagnostic
+% a larger benchmark is future work
+% attribution, naming the layer, is the weakest part and is best-effort
+
+%%%
+% message<three contributions: the empirical study, \sys, and the bpf-bench corpus>
+% an empirical study of what a rejection leaves the developer to recover, none determined by the message
+% \sys, which reframes a rejection as a recoverable proof and localizes the break
+% bpf-bench, a corpus of 235 reproduced rejections labeled independently of \sys
+
+%%%%%%%%%%%%Outline%%%%%%%%%%%%%%%%%%
+
+\section{Introduction}
+\label{sec:introduction}
+
+eBPF now runs production networking, security enforcement, and observability inside the Linux kernel~\cite{gbadamosi2024ebpf}. Every program must first clear a static safety verifier. A rejection returns one message that names only the failing register and the rejected access~\cite{gershuni2019simple}. To act, the developer must recover what the message leaves out: which bug the rejection stands for, which layer must change, and where the fix belongs. The layer can be the developer's source, the compiler, the verifier, or the environment. The message settles none of the three. The developer is left to repair by trial and error~\cite{deokar2024empirical}.
+
+On \emph{bpf-bench}, a corpus of 235 reproduced rejections we label by hand, the message falls short on all three (\S\ref{sec:study}). One message names many different bugs: the most common, \texttt{R\# invalid mem access 'scalar'}, covers 28 rejections across nine source mechanisms, and 15 of the 82 message templates span more than one mechanism. The message carries no field for the responsible layer. Those same 28 rejections include 23 source bugs, four compiler artifacts, and one environment fault. The flagged instruction is the fix site in only 25.5\% of cases, and only 13 of the 235 messages give a source line. Existing tools stop at the message. Message matchers restate the message in plainer language~\cite{rizza2025design}. Program-synthesis tools and safe-language runtimes regenerate or replace the program so the rejection never arises~\cite{zheng2024kgent,jia2025rex}.
+
+\looseness=-1 The message hides reasoning the verifier has already computed. A rejection is a safety proof the verifier builds instruction by instruction but cannot complete. At the rejected instruction the verifier cannot prove a needed safety fact, so it discards the proof and prints the symptom. Under \texttt{log\_level=2} the verifier prints each register's abstract state after every instruction~\cite{linuxkernel-bpf-verifier,vishwanathan2022sound}. \sys reads that level-two log, recovers the discarded proof, and localizes the \emph{break}, the transition where a needed safety fact is established and then lost. Reading the break from the verifier's own states makes localization the principled core of \sys. Naming the responsible layer goes beyond what the log records. \sys treats the layer as a separate, weaker heuristic.
+
+\sys is a userspace command-line tool that reads only the verifier log and emits a compiler-style diagnostic over a stable JSON contract~\cite{becker2019compiler}. Two claims drive the evaluation. First, \sys localizes the break across \emph{bpf-bench}, where the labeled responsible line lies at most 13 instructions from the rejected line. Second, the diagnostic helps a downstream model repair the program in one shot. In a calibration pilot, one open model repairs 5 of 18 cases from the raw log and 18 of 18 from the \sys diagnostic. A larger benchmark is future work. Attribution, the step that names the layer, is the weakest part of \sys and is reported as a best-effort heuristic.
+
+\noindent\textbf{Contributions.} This paper makes the following contributions:
+\begin{itemize}
+\item an empirical study, on \emph{bpf-bench}, of what a verifier rejection leaves a developer to recover: the bug, the responsible layer, and the fix site, none of which the message determines;
+\item \sys, which reframes a rejection as a recoverable proof attempt and localizes the \emph{break} from the verifier's own states;
+\item \emph{bpf-bench}, a corpus of 235 reproduced rejections labeled independently of \sys.
+\end{itemize}

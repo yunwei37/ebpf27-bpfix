@@ -1,0 +1,20 @@
+%%%%%%%%%%%%Outline%%%%%%%%%%%%%%%%%%
+
+%%%
+% message<\sys recovers the discarded proof to localize the break, principled, while attribution is best-effort, with corpus results holding and aggregate baselines future work>
+% a rejection is a safety proof the verifier builds per instruction but cannot complete, then discards
+% the developer is left one terminal message that reports only the symptom
+% \sys recovers the discarded proof from the level-two log and localizes the break, established then lost
+% \sys reads the break from the verifier's own states, which makes localization principled
+% naming the layer goes beyond the log, so \sys uses hand-written signals and reports it best-effort
+% on bpfix-bench the labeled responsible line lies at most 13 instructions from the rejected line
+% in a calibration pilot one model repairs 5 of 18 from the raw log and 18 of 18 from the diagnostic
+% a taxonomy confusion matrix and an aggregate localization comparison need a fresh replay capture, future work
+% \sys runs in userspace, reads only the verifier log, and explains a rejection so the developer can repair it
+
+%%%%%%%%%%%%Outline%%%%%%%%%%%%%%%%%%
+
+\section{Conclusion}
+\label{sec:conclusion}
+
+A verifier rejection is a safety proof the verifier builds instruction by instruction but cannot complete, and then discards. The developer is left with one terminal message that reports only the symptom, with the fix and the layer to work out. \sys recovers the discarded proof from the level-two log and localizes the \emph{break}, the transition where a needed safety fact is established and then lost. \sys reads the break from the verifier's own abstract states, which makes localization principled~\cite{linuxkernel-bpf-verifier}. Naming the responsible layer goes beyond what the log records, so \sys relies on hand-written signals and reports the layer as best-effort. On \emph{bpfix-bench}, a corpus of 235 reproduced rejections, the labeled responsible line lies at most 13 instructions from the rejected line. In a calibration pilot with one open model, a downstream model repairs 5 of 18 cases from the raw log and 18 of 18 from the \sys diagnostic. A taxonomy-accuracy confusion matrix and an aggregate localization comparison against message-level baselines need a fresh replay capture and remain future work. \sys runs entirely in userspace, reads only the verifier log, and explains a rejection so that a~developer~can~repair~it.

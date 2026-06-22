@@ -1,0 +1,17 @@
+\begin{table*}[t]
+  \centering
+  \caption{The verifier's \texttt{log\_level} is a \texttt{u32} bitmask, not a graded level (\texttt{bpf\_verifier.h:638-644}). Each user-settable bit controls one output dimension and bits combine with bitwise OR; the kernel gates each output with \texttt{\&} and rejects any bit outside the mask with \texttt{-EINVAL} (\texttt{log.c:24}). \emph{bpfix-bench} pins \texttt{level=2}.}
+  \label{tab:log-levels}
+  \small
+  \begin{tabular}{@{}l l p{9.2cm} l@{}}
+    \toprule
+    Flag (value) & Settable by & What it adds to the output & Gating site \\
+    \midrule
+    \texttt{BPF\_LOG\_LEVEL1=1} & user & One line per instruction: its index, disassembly, source-line hint, and only the registers and stack slots this instruction scratched. & \texttt{verifier.c:19492} \\
+    \texttt{BPF\_LOG\_LEVEL2=2} & user & On top of level~1: at every point where the analysis switches paths (\texttt{from X to Y:}), the full-frame register and stack snapshot; plus precision backtracking and the live-register table. & \texttt{verifier.c:19483} \\
+    \texttt{BPF\_LOG\_STATS=4} & user & Orthogonal to level: appends verification time and stack depth (the \texttt{processed N insns} summary is emitted whenever the level is nonzero). & \texttt{verifier.c:22900} \\
+    \texttt{BPF\_LOG\_FIXED=8} & user & No change to content; switches the log buffer from rolling overwrite to a fixed prefix fill with tail truncation. & \texttt{log.c:78} \\
+    \texttt{BPF\_LOG\_KERNEL=16} & kernel only & Routes the log to \texttt{dmesg}; a user attempt to set this bit is rejected by the mask check. & \texttt{log.c:24,68} \\
+    \bottomrule
+  \end{tabular}
+\end{table*}

@@ -1,0 +1,22 @@
+\begin{table}[t]
+  \centering
+  \caption{Each row is a terminal message (one error line the verifier prints on a rejection), normalized over register numbers and offsets; the six shown are the most common, and the last rows aggregate the other 77. \emph{Fixes} counts the distinct hand-labeled source fixes the message's cases needed; \emph{Layers} splits those cases by layer: source (src), compiler (cmp), verifier (vrf).}
+  \label{tab:rejection-classes}
+  \footnotesize
+  \setlength{\tabcolsep}{3pt}
+  \begin{tabular}{@{}>{\raggedright\arraybackslash}p{4.2cm} r r >{\raggedright\arraybackslash}p{2.3cm}@{}}
+    \toprule
+    Terminal message & Cases & Fixes & Layers \\
+    \midrule
+    \texttt{R invalid mem access 'scalar'}               &  28 & 14 & src 24, cmp 4 \\
+    \texttt{invalid access to packet}                    &  26 &  6 & src 21, vrf 4, cmp 1 \\
+    \texttt{invalid access to map value}                 &  18 &  5 & src 13, vrf 3, cmp 2 \\
+    \texttt{R !read\_ok}                                 &  13 &  4 & src 12, cmp 1 \\
+    \texttt{misaligned stack access}                     &   7 &  2 & cmp 7 \\
+    \texttt{R invalid mem access 'map\_value\_or\_null'} &   7 &  1 & src 7 \\
+    \midrule
+    Other 77 messages                                    & 136 & -- & \\
+    \textbf{All 83 messages}                             & \textbf{235} & -- & \\
+    \bottomrule
+  \end{tabular}
+\end{table}
