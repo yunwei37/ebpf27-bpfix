@@ -6,7 +6,39 @@
 \usepackage{tikz}
 \usetikzlibrary{arrows.meta,positioning,decorations.pathreplacing}
 \usepackage{listings}
-\usepackage{lstlinebgrd}
+
+% Local compatibility replacement for lstlinebgrd: the packaged version uses
+% the old listings switch-case syntax and fails with listings 1.9.
+\makeatletter
+\lst@Key{numbers}{none}{%
+    \def\lst@PlaceNumber{\lst@linebgrd}%
+    \lstKV@SwitchCases{#1}%
+    {none:\def\lst@PlaceNumber{\lst@linebgrd}\\%
+     left:\def\lst@PlaceNumber{\llap{\normalfont
+                \lst@numberstyle{\thelstnumber}\kern\lst@numbersep}\lst@linebgrd}\\%
+     right:\def\lst@PlaceNumber{\rlap{\normalfont
+                \kern\linewidth \kern\lst@numbersep
+                \lst@numberstyle{\thelstnumber}}\lst@linebgrd}%
+    }{\PackageError{Listings}{Numbers #1 unknown}\@ehc}}
+\lst@Key{linebackgroundcolor}{}{\def\lst@linebgrdcolor{#1}}
+\lst@Key{linebackgroundsep}{0pt}{\def\lst@linebgrdsep{#1}}
+\lst@Key{linebackgroundwidth}{\linewidth}{\def\lst@linebgrdwidth{#1}}
+\lst@Key{linebackgroundheight}{\ht\strutbox}{\def\lst@linebgrdheight{#1}}
+\lst@Key{linebackgrounddepth}{\dp\strutbox}{\def\lst@linebgrddepth{#1}}
+\lst@Key{linebackgroundcmd}{\color@block}{\def\lst@linebgrdcmd{#1}}
+\newcommand{\lst@linebgrd}{%
+    \ifx\lst@linebgrdcolor\empty\else
+    \rlap{%
+        \lst@basicstyle
+        \color{-.}%
+        \lst@linebgrdcolor{%
+        \kern-\dimexpr\lst@linebgrdsep\relax%
+        \lst@linebgrdcmd{\lst@linebgrdwidth}{\lst@linebgrdheight}{\lst@linebgrddepth}%
+        }%
+    }%
+    \fi
+}
+\makeatother
 
 \definecolor{lstkw}{HTML}{0033B3}
 \definecolor{lstcmt}{HTML}{6A737D}

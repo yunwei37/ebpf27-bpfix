@@ -36,19 +36,19 @@
 
 % ==== RQ3: Helping repair ====
 %%%
-% message<a pilot shows the structured diagnostic helps one-shot repair, reported as calibration not a benchmark>
-% to test downstream use we build bpfix-test, 40 repair cases with executable oracles
-% an oracle passes only when the candidate compiles, loads, and runs correctly
-% on an 18-case same-config pilot, raw-log repair passes 5 of 18 and structured-diagnostic repair 18 of 18
-% we report this as a calibration pilot, one model, one run, no trimmed-log or cross-model baseline, full suite future work
+% message<bpfix-test shows that the structured diagnostic improves executable LLM repair>
+% to test downstream use we build bpfix-test, 75 source-level repair cases with executable oracles
+% the cases combine mechanism-designed programs and minimized real/tutorial seeds, and cover five verifier-failure mechanisms
+% an oracle passes only when the candidate compiles, loads, and satisfies functional and source-semantics checks
+% on Qwen3.6 27B, raw-log repair passes 22 of 75 and structured-diagnostic repair passes 38 of 75; with one retry they reach 30 and 44
 
 % ==== Threats to validity ====
 %%%
-% message<pending captures, small samples, single-adjudicator labels, a tuned pilot, and corpus skew bound the results>
+% message<pending captures, small samples, single-adjudicator labels, working-suite status, and corpus skew bound the results>
 % the two pending results need every case's replay log, of which only one is in the artifact
 % the hard classes carry few cases, reported with raw counts
 % the adjudicated labels rest on a single adjudicator with agreement not yet measured
-% the repair pilot reuses the tuned case and one model, so it is a calibration signal
+% the repair suite is a working suite rather than a frozen heldout benchmark
 % the distance metric covers only the 130 same-numbering cases, and the source-bug skew bounds the rarer classes
 
 %%%%%%%%%%%%Outline%%%%%%%%%%%%%%%%%%
@@ -71,6 +71,10 @@ We evaluate \sys with three research questions:
 
 \noindent\textbf{RQ2: Attributing the failure class.} Attribution assigns each rejection the layer that must change, scored against the hand-assigned label over all 235 cases and compared to the message dictionary. \sys reads 73 hand-written signals over the rich trace to make this call, and the false-positive verdict rests on only two precision signals, so attribution is the weakest part of the system. The message dictionary cannot recover the lowering-artifact and false-positive classes, since they share terminal messages with source bugs. The measured comparison, an accuracy and per-class confusion matrix, is pending a fresh replay capture, because the per-case replay logs the scorer needs are not yet in the artifact.
 
-\noindent\textbf{RQ3: Helping repair.} To test whether the structured diagnostic helps downstream, we build \emph{bpfix-test}, a suite of 40 repair cases with executable oracles. An oracle passes a candidate only when it compiles, loads past the verifier, and returns the correct result under a packet or helper run. On an 18-case same-config pilot with one open model, one-shot repair from the raw verifier log passes 5 of 18, and from the \sys structured diagnostic 18 of 18. We report this as a calibration pilot, with one model, one run, and no trimmed-log or cross-model baseline, and we leave the full 40-case suite to future work.
+\noindent\textbf{RQ3: Helping repair.} To test whether the structured diagnostic helps downstream repair, we build \emph{bpfix-test}, a 75-case source-level LLM repair suite with executable oracles. Each case contains a buggy BPF C program, the raw verifier log, the \sys diagnostic for the same rejection, a reference repair used only for admission checks, and a per-case oracle. The suite is organized by source family rather than by historical split: mechanism-designed standalone programs (40), Cilium (7), ActPlane (5), xdp-tools (5), AgentSight (4), bpf-developer-tutorial (4), bpftime (3), eunomia.dev (3), DatRail (2), NCCL-eBPF (1), and Tetragon (1). The cases cover proof-lifecycle loss, modern BPF protocol misuse, source/object correlation failures, helper memory contracts, and environment or configuration boundaries. A candidate passes only if it compiles, loads through the verifier, and satisfies the case's functional, proof-shape, source-semantics, and custom predicates; the model sees only the buggy source and either the raw log or the \sys diagnostic.
 
-\noindent\textbf{Threats to validity.} The two pending results, \sys's localization accuracy and the attribution confusion matrix, both need the per-instruction replay log of every case, and only one such log is in the artifact, so we will produce them from a fresh kernel-6.15.11 replay capture. The hard classes carry few cases, so we report them with raw counts. The 9 adjudicated labels rest on a single adjudicator, and inter-annotator agreement is not yet measured. The repair pilot reuses the case \sys was tuned on and one model, so it is a calibration signal, and a held-out benchmark is future work. The instruction-distance metric is defined only on the 130 cases that share the replay numbering, and the corpus's skew toward source bugs, 194 of 235, bounds what the rarer classes can show.
+\input{figures/sec-5-bpfix-test}
+
+Under the same Qwen3.6 27B model, temperature, prompt budget, timeout, and oracle, one-shot repair from the raw verifier log passes 22 of 75 cases, while repair from the \sys diagnostic passes 38 of 75. Allowing one failure-informed retry raises the raw-log result to 30 of 75 and the \sys result to 44 of 75. This shows that \sys improves the first repair signal and that the advantage remains after an ordinary retry loop. A hosted GLM 5.2 check shows the same one-shot direction, 28 to 38 of 75, but retry narrows the gap, 47 to 52 of 75, indicating that retry is a strong intervention for that model. A small local Qwen2.5 3B stress run passes 0 of 75 from raw logs and 8 of 75 with \sys, so the suite also separates model capacity from diagnostic help. These results support a controlled-usefulness claim for the current working suite; they do not by themselves make \emph{bpfix-test} a frozen heldout benchmark.
+
+\noindent\textbf{Threats to validity.} The two pending results, \sys's localization accuracy and the attribution confusion matrix, both need the per-instruction replay log of every case, and only one such log is in the artifact, so we will produce them from a fresh kernel-6.15.11 replay capture. The hard classes carry few cases, so we report them with raw counts. The 9 adjudicated labels rest on a single adjudicator, and inter-annotator agreement is not yet measured. The repair suite is a working suite built during benchmark development, not a frozen heldout benchmark; before making benchmark-generalization claims, we need a no-touch heldout split with complete source-family and mechanism metadata and clean reruns for every headline configuration. The instruction-distance metric is defined only on the 130 cases that share the replay numbering, and the corpus's skew toward source bugs, 194 of 235, bounds what the rarer classes can show.
