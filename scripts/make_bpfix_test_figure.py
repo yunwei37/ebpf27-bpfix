@@ -26,7 +26,7 @@ MODELS = [
         "label": "Qwen2.5",
         "color": "#54A24B",
         "one_shot": {"raw": 0.0, "bpfix": 10.7},
-        "retry": {"raw": None, "bpfix": None},
+        "retry": {"raw": 0.0, "bpfix": 13.3},
     },
 ]
 
@@ -78,17 +78,6 @@ def draw_grouped(ax):
                 label=model["label"] if group_idx == 0 else None,
             )
             annotate(ax, bars[0], value, model_idx)
-
-    for group_idx in [2, 3]:
-        ax.text(
-            x[group_idx] + offsets[2],
-            5,
-            "n/r",
-            ha="center",
-            va="bottom",
-            fontsize=6,
-            color="#555555",
-        )
 
     ax.set_xticks(x)
     ax.set_xticklabels([group[0] for group in groups], fontsize=7)

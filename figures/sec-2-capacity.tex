@@ -1,6 +1,5 @@
 \begin{figure}[t]
-  \begin{lstlisting}[style=bpfix,language=C,
-      linebackgroundcolor={\ifnum\value{lstnumber}=2 \color{lstbad!40}\fi}]
+  \begin{lstlisting}[style=bpfix,language=C]
 // bitesize.bpf.c: targ_comm is a 16-byte global array
 for (i = 0; targ_comm[i] != '\0' && i < TASK_COMM_LEN; i++)
     if (comm[i] != targ_comm[i])

@@ -1,20 +1,16 @@
 %%%%%%%%%%%%Outline%%%%%%%%%%%%%%%%%%
 
 %%%
-% message<\sys recovers the discarded proof to localize the break, principled, while attribution is best-effort, with corpus results holding and aggregate baselines future work>
-% a rejection is a safety proof the verifier builds per instruction but cannot complete, then discards
-% the developer is left one terminal message that reports only the symptom
-% \sys recovers the discarded proof from the level-two log and localizes the break, established then lost
-% \sys reads the break from the verifier's own states, which makes localization principled
-% naming the layer goes beyond the log, so \sys uses hand-written signals and reports it best-effort
-% on bpfix-bench the labeled responsible line lies at most 13 instructions from the rejected line
-% on the current 75-case bpfix-test suite, Qwen3.6 27B repair improves from 22 to 38 one-shot and from 30 to 44 with one retry
-% a taxonomy confusion matrix, an aggregate localization comparison, and a frozen heldout repair benchmark remain future work
-% \sys runs in userspace, reads only the verifier log, and explains a rejection so the developer can repair it
+% message<a rejection message under-determines the repair, and \sys recovers the proof to locate the fix site and lift repair>
+% an eBPF program loads only after a verifier proves it safe, and a rejection's message does not say how to repair it
+% across bpfix-bench, 235 reproduced rejections, the message under-determines the repair, leaving the bug, the layer, and the fix site
+% reading only the log, \sys reconstructs the discarded proof and locates the fix site from the verifier's own states
+% on bpfix-test the diagnostic raises a downstream model's repair from 22 to 38, and from 30 to 44 with one retry
+% attributing the layer remains best-effort, and a frozen heldout benchmark is future work
 
 %%%%%%%%%%%%Outline%%%%%%%%%%%%%%%%%%
 
 \section{Conclusion}
 \label{sec:conclusion}
 
-A verifier rejection is a safety proof the verifier builds instruction by instruction but cannot complete, and then discards. The developer is left with one terminal message that reports only the symptom, with the fix and the layer to work out. \sys recovers the discarded proof from the level-two log and localizes the \emph{break}, the transition where a needed safety fact is established and then lost. \sys reads the break from the verifier's own abstract states, which makes localization principled~\cite{linuxkernel-bpf-verifier}. Naming the responsible layer goes beyond what the log records, so \sys relies on hand-written signals and reports the layer as best-effort. On \emph{bpfix-bench}, a corpus of 235 reproduced rejections, the labeled responsible line lies at most 13 instructions from the rejected line. On the current 75-case \emph{bpfix-test} repair suite, Qwen3.6 27B repairs 22 cases from raw logs and 38 from \sys diagnostics in one shot, and 30 versus 44 cases with one retry. A taxonomy-accuracy confusion matrix, an aggregate localization comparison against message-level baselines, and a frozen heldout repair benchmark need more replay and benchmark work and remain future work. \sys runs entirely in userspace, reads only the verifier log, and explains a rejection so that a~developer~can~repair~it.
+An eBPF program loads only after a static verifier proves it safe, and on rejection the verifier returns a message that does not say how to repair the program. Across \bench, a corpus of 235 reproduced rejections, this message under-determines the repair, leaving the bug, the responsible layer, and the fix site for the developer to recover. Reading only the log, \sys reconstructs the safety proof the verifier discarded and locates the fix site from the verifier's own per-instruction states. On \testset, a 75-case repair suite, the \sys diagnostic raises a downstream model's repair from 22 of 75 to 38 in one shot, and from 30 to 44 with one retry. Attributing the responsible layer remains best-effort, and a frozen heldout benchmark is future work.

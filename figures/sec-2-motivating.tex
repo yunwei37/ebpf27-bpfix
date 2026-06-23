@@ -2,8 +2,7 @@
   \textbf{\footnotesize (a) Developer's C source}
   \begin{lstlisting}[style=bpfix,language=C,
       emph={udph},emphstyle={\color{lstbad}\bfseries},
-      linebackgroundcolor={%
-        \ifnum\value{lstnumber}=14 \color{lsthl}\fi}]
+      ]
 if (ethertype == ETH_P_IP) {
     ipv4_hdr = (void *)eth + ETH_HLEN;
     ...
@@ -24,9 +23,7 @@ dst_port = ...((struct udphdr *)udph)->dest;
   \begin{lstlisting}[style=bpfix,
       emph={[1]pkt},emphstyle={[1]\color{lstgood}\bfseries},
       emph={[2]scalar},emphstyle={[2]\color{lstbad}\bfseries},
-      linebackgroundcolor={%
-        \ifnum\value{lstnumber}=5 \color{lsthl}\fi
-        \ifnum\value{lstnumber}=6 \color{lsthl}\fi}]
+      ]
 ; dst_port = ... @ prog.c:270
 37: (69) r2 = *(u16 *)(r5 +2) ; ... R5=pkt(off=34,r=42)
 ...

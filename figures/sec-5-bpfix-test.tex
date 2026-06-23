@@ -1,7 +1,7 @@
 \begin{figure}[H]
   \centering
   \includegraphics[width=\columnwidth]{figures/sec-5-bpfix-test.pdf}
-  \caption{\emph{bpfix-test} repair success across three models. Bars are grouped by prompt mode, and color identifies the model. Retry bars use one failure-informed retry; Qwen2.5 3B was run only in the one-shot setting.}
-  \Description{A grouped bar chart compares raw verifier-log prompts and BPFix diagnostic prompts for Qwen3.6 27B, GLM 5.2, and Qwen2.5 3B. Each model has a distinct color. BPFix improves one-shot pass rates for all three models and improves retry pass rates for the two models with retry runs.}
+  \caption{\testset repair success across three models. Bars are grouped by prompt mode, and color identifies the model. Retry bars use one failure-informed retry. \sys improves one-shot repair for all three models and remains ahead under retry.}
+  \Description{A grouped bar chart compares raw verifier-log prompts and BPFix diagnostic prompts for Qwen3.6 27B, GLM 5.2, and Qwen2.5 3B. Each model has a distinct color. BPFix improves one-shot and retry pass rates for all three models.}
   \label{fig:bpfix-test}
 \end{figure}

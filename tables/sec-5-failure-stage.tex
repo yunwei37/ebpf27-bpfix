@@ -1,0 +1,19 @@
+\begin{table}[t]
+  \centering
+  \caption{Where repairs fail on \testset, by stage, for the one-attempt runs. The \sys diagnostic mainly removes verifier-load (Load) and proof failures; compile and model-call (Call) failures stay low. Each entry counts failing cases at a stage, and pass count plus the row total is 75.}
+  \label{tab:failure-stage}
+  \small
+  \setlength{\tabcolsep}{4pt}
+  \begin{tabular}{@{}l l r r r r r@{}}
+    \toprule
+    Model & Input & Compile & Load & Func. & Proof & Call \\
+    \midrule
+    Qwen3.6 27B & raw  &  3 & 19 &  9 & 22 & 0 \\
+                & \sys &  1 & 10 & 10 & 16 & 0 \\
+    GLM 5.2     & raw  &  1 & 10 & 11 & 25 & 0 \\
+                & \sys &  1 &  5 &  9 & 22 & 0 \\
+    Qwen2.5 3B  & raw  &  7 & 62 &  0 &  3 & 3 \\
+                & \sys & 14 & 39 &  6 &  8 & 0 \\
+    \bottomrule
+  \end{tabular}
+\end{table}
