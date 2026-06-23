@@ -11,7 +11,7 @@ verifier: R1 invalid mem access 'scalar'
   \end{lstlisting}
 
   \vspace{3pt}
-  \noindent\textbf{\footnotesize (b) Compiler artifact (cilium nat.h)}
+  \noindent\textbf{\footnotesize (b) Compiler-lowering rejection (cilium nat.h)}
   \begin{lstlisting}[style=bpfix,language=C,
       linebackgroundcolor={\ifnum\value{lstnumber}=3 \color{lstgood!40}\fi}]
 // correct source; lowering drops the packet-pointer provenance
@@ -22,6 +22,6 @@ hdrlen = ipv6_hdrlen_offset(ctx, inner_l3_off, &tuple.nexthdr, &fraginfo);
 verifier: R7 invalid mem access 'scalar'
   \end{lstlisting}
 
-  \caption{Two programs that reject with the same message, each shown with the verifier's output. (a) dereferences a kernel pointer directly, a real source bug fixed with a CO-RE read. (b) is correct source that the compiler lowered into an untracked packet-pointer path, fixed by forcing the value onto the stack. The two fixes are opposite. Of the 28 cases with this message, 23 are real source bugs, four are compiler artifacts, and one is an environment issue.}
+  \caption{Two programs that reject with the same message, each shown with the verifier's output. (a) dereferences a kernel pointer directly, a real source bug fixed with a CO-RE read. (b) is correct source that the compiler lowered into an untracked packet-pointer path, fixed by forcing the value onto the stack. The two fixes are opposite. Of the 28 cases with this message, 23 are real source bugs, four are compiler-lowering rejections, and one is an environment issue.}
   \label{fig:packet}
 \end{figure}

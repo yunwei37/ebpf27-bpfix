@@ -1,0 +1,21 @@
+\begin{figure}[t]
+  \begin{lstlisting}[style=bpfix,language=C,firstnumber=18,
+      linebackgroundcolor={\ifnum\value{lstnumber}=20 \color{lstbad!40}\fi}]
+__u64 *raw_map = (__u64 *)&globals; // map object pointer
+__u64 v = *raw_map;
+*raw_map = v + 1;                   // write through the map object
+  \end{lstlisting}
+  \begin{lstlisting}[style=bpflog]
+verifier: only read from bpf_array is supported
+  \end{lstlisting}
+  \begin{lstlisting}[style=bpfdiag]
+error[BPFIX-E010]: map pointer is accessed as ordinary memory
+  = class: source_bug              --> prog.c:20
+  = required proof: derive a map-value pointer with the proper
+    map helper before reading or writing map contents
+  = next action: look up an element, then read or write the
+    returned map-value pointer
+  \end{lstlisting}
+  \caption{From one rejection, \sys renders a structured diagnostic. The program casts the map object pointer \texttt{\&globals} to a value pointer and writes through it (top, the flagged line shaded). The verifier prints one terminal line (middle). \sys adds a stable error id, the rejected span, the safety proof the program must restore, and a next action (bottom).}
+  \label{fig:diag-example}
+\end{figure}
