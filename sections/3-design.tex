@@ -137,46 +137,60 @@
 
 %---------------------------------------------------------------------------------------------------------
 
-Section~\ref{sec:study} shows that a terminal verifier message leaves three parts of a repair unresolved: the bug, theresponsible layer, and the fix site. \sys does not attempt to infer all three directly from the terminal string. Instead, it constructs a verifier-level explanation: it recovers the safety fact required at the rejected operation, traces how the verifier-visible evidence for that fact evolved, and maps the resulting evidence to repair-relevant locations and actions.
 
-We distinguish three locations throughout the design. The \emph{rejection site} is the operation where verification stops. A \emph{proof-break witness} is a state transition after which the printed verifier state no longer supports a required fact. The \emph{repair site} is the source location ultimately changed by the developer. \sys recovers the rejection site and, when the trace exposes one, a proof-break witness. It uses these locations to narrow the repair without assuming that either must coincide with the eventual source edit. Likewise, facts reconstructed from verifier states form the evidence-backed core of the diagnostic, whereas responsibility attribution remains a separate, lower-confidence inference.
+A verifier rejection marks a safety obligation that the verifier could not discharge at the rejected operation. The terminal message identifies this rejection site, but it does not necessarily reveal where verifier-visible evidence for the obligation disappeared or where the source should ultimately be changed. \sys reconstructs the observable portion of this proof lifecycle from an existing verifier log and reports a proof-break witness when the available evidence exposes one.
+
+We distinguish three locations throughout the design. The \emph{rejection site} is the operation where verification stops. A \emph{proof-break witness} is an observed transition after which the available verifier evidence no longer supports a required fact. The \emph{repair site} is the source location eventually changed by the developer. A proof-break witness narrows the diagnosis, but it is neither a claim about the smallest causal instruction set nor a prediction that the same location must be edited.
+
 
 
 \subsection{Architecture and Data Flow}
 \label{sec:design-architecture}
 
-Figure~\ref{fig:design-overview} organizes \sys into two layers. The first layer, \emph{verifier-evidence
-reconstruction}, consumes an existing rejection log. It isolates the verifier output from surrounding build and loader messages, anchors the rejected instruction, instantiates the safety fact required at that instruction, and follows that fact through the printed abstract states. The result is a compact
-evidence record containing the required proof and, when observable, the locations where it was established, lost, and finally required.
 
-The second layer, \emph{diagnostic synthesis}, translates this record into repair guidance. It maps verifier instructions to source annotations when the log provides them, assigns span precision, applies ordered evidence rules to refine the likely failure class, and derives a next action from the missing
-proof. The evaluated artifact renders the record as a compiler-style diagnostic and serializes the same evidence through a versioned JSON contract.
 
-The verifier log is the only required input. \sys neither modifies the kernel nor re-runs the verifier, and it constructs no independent safety model. Missing source annotations reduce localization precision but do not prevent the log-only analysis from producing a diagnostic.
+Figure~\ref{fig:design-overview} organizes \sys as a log-first pipeline with two conceptual layers. The first, \emph{verifier-evidence reconstruction}, isolates the verifier region from an existing rejection log, anchors the rejected instruction, and instantiates the safety fact required there. It then reconstructs the observable lifecycle of that fact from verifier-state snapshots, terminal evidence, and source annotations present in the log. The result is an evidence record containing the required proof, the rejection site, and zero or more evidence-tagged establishment and loss events. When the available evidence exposes a transition after which the fact is no longer supported, \sys reports that transition as a proof-break witness.
+
+The second layer, \emph{diagnostic synthesis}, converts this record into repair-oriented guidance. It selects the best available primary and related spans, reports the precision of the resulting localization, and derives a next action from the proof family and its observed lifecycle. Ordered evidence rules additionally assign a likely failure class and confidence. This attribution is best-effort and remains separate from the evidence-backed proof reconstruction. The evaluated artifact renders the
+result as a Rust-style plain-text diagnostic containing a stable error identifier, the required proof, supporting evidence, relevant spans, and \texttt{help:} guidance.
+
+
+The verifier log is the only required input. In the default path, \sys does not modify the kernel, invoke or re-run the verifier, or construct an independent model of verifier semantics. Source annotations embedded in the log, and optional object metadata when object analysis is enabled, can improve source and instruction correlation. Their absence reduces localization precision but does not prevent log-only diagnosis.
+
 
 \subsection{Reconstructing the Verifier-Visible Proof}
 \label{sec:design-proof}
 
-The first analysis task is to determine which fact to follow. A verbose trace may contain hundreds of register and stack states, whereas the terminal message identifies only the operation whose safety precondition could not be proved. \sys uses the message to propose a proof family, such as pointer
-provenance, packet bounds, scalar range, non-nullness, stack initialization, or reference lifetime. It then binds that family to concrete values recovered near the rejected instruction, including the affected register, access size, offset, or resource identifier. The terminal message therefore seeds the analysis; it does not determine the final diagnosis.
 
-For the running example, the terminal message \texttt{R5 invalid mem access 'scalar'} suggests a
-pointer-provenance failure. From the rejected load and its nearby state, \sys instantiates the required proof as follows: \texttt{R5} must remain a verifier-recognized, in-bounds packet pointer at instruction 37. This identifies both the object being tracked and the property that must hold at its use.
 
-A proof-family-specific tracker then scans the available states. Pointer trackers follow register types, identities, offsets, and accessible ranges; scalar trackers follow known bounds; and resource trackers follow acquisition and release state. The trackers emit up to three event roles. An \emph{established} event records a state containing the required fact. A \emph{lost} event records a later transition
-after which the fact is no longer visible. A \emph{rejected} event records the operation that requires the absent fact.
 
-In Figure~\ref{fig:design-overview}, an earlier state represents \texttt{R5} as \texttt{pkt(off=34,r=42)}, a later state represents it as scalar value \texttt{40}, and the final load
-attempts to dereference it. Connecting these events distinguishes a proof that was never established from one that was established and subsequently lost. The former suggests introducing a missing check or initialization. The latter suggests preserving verifier-visible evidence across arithmetic, control-flow merging, or lowering, or re-establishing it immediately before use.
 
-The reported loss remains a witness to a verifier-visible transition, not a claim about the smallest causal instruction set or the exact line that a patch must edit. \sys follows the states present in one rejection log; it does not enumerate unprinted paths or replay the verifier. This boundary keeps the
-localization faithful to the evidence available to the developer.
+The first task is to identify the safety obligation that failed at the rejection site. A verbose trace contains many register and stack states, while the terminal message names only the rejected operation. \sys maps this message to a proof family, such as pointer provenance, packet bounds, scalar range, non-nullness, stack initialization, or reference lifetime. It then instantiates a concrete required proof using the affected register and parameters recoverable from the terminal line and nearby verifier
+state, such as an access offset, size, scalar range, or reference identifier. The terminal message therefore anchors the obligation; it does not by itself explain why the obligation became unavailable.
+
+
+In the example of Figure~\ref{fig:diagnostic}, the terminal message \texttt{R5 invalid mem access 'scalar'} maps to a pointer-provenance obligation. From the rejected load and nearby state, \sys determines that \texttt{R5} must retain verifier-recognized packet pointer provenance at BPF instruction~37. This identifies the value being tracked and the property required at its use without treating the rejection site as the eventual repair site.
+
+
+\sys next applies proof-family-specific event extraction to the evidence available in the log. Depending on the obligation, this evidence may come from verifier-state snapshots, branch states, the terminal message, or source annotations. \sys records evidence under three roles: \emph{established}, where the required fact is visible; \emph{lost}, where the available evidence indicates that the fact ceased to be visible before use; and \emph{rejected}, where an operation requires the absent fact. Each event retains its evidence source. When the log exposes a concrete state transition after which the fact is no longer supported, \sys reports that transition as a proof-break witness.
+
+For the rejection whose diagnostic appears in Figure~\ref{fig:diagnostic}, an earlier printed state represents \texttt{R5} as \texttt{pkt(off=34,r=42)}, whereas a later state on the path to instruction~37 represents it as the scalar value \texttt{40}. The final load then attempts to dereference \texttt{R5}. \sys therefore reports the observed pointer-to-scalar transition as a proof-break witness and the
+load as the rejection site. The witness is evidence of where the required pointer provenance ceased to be visible; it does not identify the smallest causal instruction set or the source line that must ultimately be edited. \sys analyzes the evidence printed in one rejection log without enumerating unprinted paths or replaying the verifier.
+
 
 \subsection{Evidence-Aware Diagnostic Synthesis}
 \label{sec:design-synthesis}
 
-\sys projects the reconstructed lifecycle into a multi-span diagnostic. The rejected operation becomes the primary span, while proof-establishment and proof-loss events become related spans when instruction or source locations are available. Each span carries its localization precision, so an exact program
-counter, a nearby source annotation, and a terminal-line fallback are not presented as equivalent locations.
+
+\sys renders the reconstructed evidence record as a Rust-style multi-span diagnostic. The rejected event supplies the primary span, while located establishment and loss events supply related spans. A state-backed loss may therefore appear as a proof-break witness, whereas annotation-backed evidence is shown as nearby context. An overall span-confidence grade distinguishes an exact instruction from a source-annotation or terminal-line fallback.
+
+Repair guidance is derived from the required proof and its observed lifecycle. A base classifier maps the obligation to a next-action category, while applicable proof signals refine the failure class, confidence, and \texttt{help:} guidance. Because the verifier observes bytecode after compiler lowering and loader-side relocation, including CO-RE relocation~\cite{linux-bpf-llvm-reloc}, a state transition reveals what the verifier observed but not necessarily which layer caused it. Responsibility attribution is therefore best-effort: ordered signals may override the message-level class; otherwise the base class remains.
+
+The final diagnostic contains a stable \texttt{BPFIX-*} identifier, the required proof, primary and related spans, supporting evidence, a failure class and confidence, and a next action. \sys provides
+evidence-backed repair guidance but neither rewrites the program nor treats the proof-break witness as the required source edit.
+
+
+
 
 Repair guidance depends on both the proof family and the observed lifecycle. When no establishing event is found, \sys recommends introducing the missing proof, such as a same-path bounds or null check. When a proof was established and later lost, it instead recommends preserving the verifier-visible fact or re-deriving it close to the rejected use. This distinction turns the diagnostic from a restatement of the
 symptom into a concrete next action.
