@@ -18,8 +18,8 @@ Figure~\ref{fig:design-overview} summarizes the three-stage workflow: log analys
 % \sys 用约 23k 行 Rust 实现，是一个流水线，唯一必需的输入是现有的 verifier log；可选的源码或 object 元数据可改善指令到源码的映射。
 The Log Analysis stage extracts the terminal error and the per-instruction abstract states into a normalized evidence stream.
 % Log Analysis 阶段把 terminal error 和逐指令的抽象状态抽取到一条归一化的 evidence 流里。
-The Proof Reconstruction stage maps the terminal error to a proof family (such as pointer provenance, packet bounds, or scalar range), identifies the required proof, and tracks evidence for that proof.
-% Proof Reconstruction 阶段把 terminal error 映到一个 proof 家族（如指针 provenance、packet bounds 或 scalar range），识别 required proof，并追踪该 proof 的 evidence。
+The Proof Reconstruction stage maps the terminal error to a \emph{proof family} (such as pointer provenance, packet bounds, or scalar range), identifies the required proof, and tracks evidence for that proof.
+% Proof Reconstruction 阶段把 terminal error 映到一个 \emph{proof family}（如指针 provenance、packet bounds 或 scalar range），识别 required proof，并追踪该 proof 的 evidence。
 The Diagnostic Generation stage selects spans and derives guidance for re-establishing the proof.
 % Diagnostic Generation 阶段选出 span，导出重建 proof 的指引。
 
@@ -42,9 +42,8 @@ From the rejected load and nearby state, \sys infers that \texttt{R5} must still
 
 \sys then tracks evidence for that proof through the log: when the evidence appears (establishment), when it becomes incompatible (loss), and when the verifier requires it (rejection).
 % 然后 \sys 在 log 中追踪该 proof 的 evidence：evidence 何时出现（establishment）、何时变得不兼容（loss）、何时被 verifier 需要（rejection）。
-When both establishment and loss are observed, the transition between them becomes the loss point.
-% 当 establishment 和 loss 都被观测到时，它们之间的转换成为 loss point。
-
+When both establishment and loss are observed, the transition between them becomes the \emph{loss point}.
+% 当 establishment 和 loss 都被观测到时，它们之间的转换成为 \emph{loss point}。
 In the running example, an earlier state represents \texttt{R5} as \texttt{pkt(off=34,r=42)}, whereas a later state before instruction~37 represents it as scalar value \texttt{40}.
 % 在运行示例中，较早的状态把 \texttt{R5} 表示为 \texttt{pkt(off=34,r=42)}，而指令 37 前的较晚状态把它表示为 scalar 值 \texttt{40}。
 The final load dereferences \texttt{R5}, so \sys reports the observed pointer-to-scalar transition as the loss point and instruction~37 as the rejection location.
