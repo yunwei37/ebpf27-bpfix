@@ -4,7 +4,7 @@
 
 \input{figures/sec-3-workflow}
 %---------------------------------------------------------------------------------------------------------
-A verifier rejection marks an operation at which the verifier cannot discharge a safety obligation. Its terminal message identifies this \emph{rejection site}, but not necessarily where supporting evidence disappeared or where the source should be changed. From an existing verifier log, \sys reconstructs the observable lifecycle of the required fact. We distinguish the rejection site, an observed \emph{proof-break witness} after which logged evidence no longer supports that fact, and the developer-chosen \emph{repair site}. A witness narrows the diagnosis, but is neither a minimal causal instruction set nor necessarily the location to edit.
+A verifier rejection marks an operation at which the verifier cannot establish a required proof. Its terminal error identifies this \emph{rejection location}, but not necessarily where the proof was lost or where the source should be changed. From an existing verifier log, \sys reconstructs the observable lifecycle of the required proof. We distinguish the rejection location, an observed \emph{proof-break witness} after which logged evidence no longer supports the proof, and the developer-chosen \emph{repair location}. A witness narrows the diagnosis, but is neither a minimal causal instruction set nor necessarily the repair location.
 
 Figure~\ref{fig:design-overview} summarizes the three-stage workflow: log analysis normalizes evidence around the rejection, proof reconstruction identifies and tracks the failed obligation, and diagnostic generation converts the resulting evidence into repair-oriented guidance.
 
