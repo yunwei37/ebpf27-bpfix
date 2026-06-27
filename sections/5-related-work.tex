@@ -1,41 +1,17 @@
 \section{Related Work}\label{sec:related-work}
 
-\noindent Three lines of work bear on \sys, from the eBPF domain outward.
-% 有三条线和 \sys 相关，从 eBPF 领域往外排。
-Each line decides safety, bypasses the verifier, or localizes a failure from a structured artifact the checker builds during its own analysis.
-% 每条线要么判定安全、要么绕开 verifier、要么从 checker 在自己分析时构建的结构化制品上定位失败。
-The eBPF verifier builds no such artifact, so \sys reconstructs one from the rejection log.
-% eBPF verifier 不构建这种制品，所以 \sys 从 rejection log 里重建一个。
+\noindent\textbf{eBPF verification and safety.}
+Prior eBPF tooling decides whether a program is safe or works around the verifier, leaving rejection diagnosis to the developer~\cite{deokar2024empirical}.
+% 既有 eBPF 工具要么判定程序是否安全、要么绕开 verifier，把 rejection 诊断留给开发者。
+Offline re-provers such as PREVAIL establish safety over their own abstract domain~\cite{gershuni2019simple}, verifier audits check the soundness of its operators~\cite{vishwanathan2023verifying, vishwanathan2022sound, sun2024validating}, and other work replaces the verifier with safe Rust~\cite{jia2025rex}, synthesizes passing programs~\cite{zheng2024kgent}, or isolates programs at runtime~\cite{lu2024moat, zhang2024hive, lim2023unleashing, lim2024safebpf}.
+% PREVAIL 在自己的抽象域上证明安全，verifier 审计检查它算子的可靠性，另一些工作用 safe Rust 替代 verifier、合成能过的程序、或在运行时隔离程序。
+None replays the rejection log to reconstruct where the required proof was lost.
+% 没有一个回放 rejection log 去重建 required proof 是在哪丢的。
 
-\noindent\textbf{eBPF verification and safety.} Prior eBPF tooling decides whether a program is safe or works around the verifier, and explaining why a rejected program failed is left to the developer.
-% 既有 eBPF 工具要么判定程序是否安全、要么绕开 verifier，至于被拒程序为什么失败则留给开发者。
-Empirical studies document the cost: verifier rejections are hard to read and push developers to rewrite working code to pass the verifier~\cite{deokar2024empirical}.
-% 实证研究记录了代价：verifier rejection 难读，逼开发者改写本来能工作的代码去过 verifier。
-Offline re-provers such as PREVAIL establish safety over their own abstract domain without reading a rejection log~\cite{gershuni2019simple}, and verifier audits check the soundness of its range and \texttt{tnum} operators or find logic bugs that admit unsafe programs~\cite{vishwanathan2023verifying, vishwanathan2022sound, sun2024validating}.
-% PREVAIL 这类离线 re-prover 在自己的抽象域上证明安全、不读 rejection log，而 verifier 审计检查它 range 和 \texttt{tnum} 算子的可靠性、或找出放过不安全程序的逻辑 bug。
-Other eBPF work replaces the verifier with safe Rust~\cite{jia2025rex}, synthesizes programs that pass the verifier~\cite{zheng2024kgent}, optimizes the bytecode before it loads~\cite{xu2021synthesizing, mao2024merlin}, or isolates programs at runtime~\cite{lu2024moat, zhang2024hive, lim2023unleashing, lim2024safebpf, dwivedi2024fast}.
-% 另一些 eBPF 工作用 safe Rust 替代 verifier、合成能过 verifier 的程序、在加载前优化字节码、或在运行时隔离程序。
-None replays the verifier's own rejection log to reconstruct where the required proof was lost.
-% 没有一个回放 verifier 自己的 rejection log 去重建 required proof 是在哪丢的。
-
-\noindent\textbf{Error diagnosis for compilers and checkers.} Tools that diagnose a rejection exist outside eBPF, but they read facts the checker built during its own check.
-% eBPF 之外也有诊断 rejection 的工具，但它们读的是 checker 在自己检查时构建好的 fact。
-Type-error diagnosis localizes the source responsible for an ill-typed program either by reasoning over the typing constraints the checker produces~\cite{pavlinovic2014finding, zhang2014toward}, or by learning over checker-derived features~\cite{seidel2017learning}.
-% type-error 诊断定位导致 ill-typed 程序的源码，要么对 checker 产生的 typing constraint 做推理、要么在 checker 衍生的 feature 上做学习。
-For eBPF, Pretty Verifier maps the verifier's error to a C source line and rewords it from the source, the object file's debug information, and the verifier output~\cite{rizza2025design}, while the BPF Verifier Visualizer accumulates and renders the verifier's per-instruction register and stack state interactively~\cite{bpfvv}.
-% 在 eBPF 这边，Pretty Verifier 把 verifier error 映到一个 C 源码行、结合源码、目标文件的调试信息和 verifier 输出重述它，而 BPF Verifier Visualizer 把 verifier 逐指令的寄存器和栈状态累积起来、交互式渲染。
-These tools read facts the checker owns, reword its message, or replay its logged states for a developer to inspect.
-% 这些工具读 checker 持有的 fact、重述它的 message、或把它记录的 state 回放给开发者看。
-None localizes, on its own, where the required proof was lost.
-% 没有一个能自动定位 required proof 是在哪丢的。
-\sys reconstructs the proof lifecycle from the verifier log the kernel produced, recovering state such as register types, scalar ranges, and pointer provenance~\cite{linuxkernel-bpf-verifier}.
-% \sys 从内核产生的 verifier log 重建 proof 生命周期，恢复出寄存器类型、scalar 范围、指针 provenance 这类状态。
-
-\noindent\textbf{Fault localization and proof explanation.} Techniques that pinpoint or explain a failure predate eBPF, but each needs an input \sys lacks.
-% 定位或解释失败的技术早于 eBPF，但每一个都需要一个 \sys 没有的输入。
-Spectrum-based fault localization ranks suspect statements by how their execution correlates with test failures, needing many runs and a test suite~\cite{wong2016survey, jones2005empirical}; program slicing extracts the statements a value depends on, needing the program's dependence graph~\cite{weiser1981program}; and unsat-core extraction names a minimal infeasible subset of constraints from a solver's structured search artifacts~\cite{cimatti2011computing}.
-% spectrum-based fault localization 按语句执行与测试失败的相关性给可疑语句排序，需要大量运行和一套测试；program slicing 抽取一个值依赖的语句，需要程序的依赖图；unsat-core 抽取从 solver 的结构化搜索制品里点出一个最小的不可满足约束子集。
-The kernel verifier produces none of these artifacts, yet it prints its abstract state after every instruction~\cite{linuxkernel-bpf-verifier, gershuni2019simple}.
-% 内核 verifier 这些制品一个都不产生，但它在每条指令后打印它的抽象状态。
-\sys migrates localization to this setting, reading one rejection log to reconstruct the required proof's lifecycle from the verifier's own printed state.
-% \sys 把定位迁移到这种场景，读一份 rejection log，从 verifier 自己打印的状态重建 required proof 的生命周期。
+\noindent\textbf{Error diagnosis and fault localization.}
+Tools that diagnose rejections outside eBPF read facts the checker built: type-error diagnosis reasons over typing constraints~\cite{pavlinovic2014finding, zhang2014toward, seidel2017learning}, spectrum-based fault localization needs many test runs~\cite{wong2016survey, jones2005empirical}, program slicing needs the dependence graph~\cite{weiser1981program}, and unsat-core extraction needs a solver's search artifacts~\cite{cimatti2011computing}.
+% eBPF 之外诊断 rejection 的工具读 checker 构建的 fact：type-error 诊断推 typing constraint，spectrum-based fault localization 需要大量测试运行，program slicing 需要依赖图，unsat-core 抽取需要 solver 的搜索制品。
+For eBPF, Pretty Verifier uses regular expressions to map the terminal error to a source line and hint~\cite{rizza2025design}, and BPF Verifier Visualizer provides a frontend that renders per-instruction state interactively~\cite{bpfvv}, but neither localizes where the proof was lost.
+% 在 eBPF 这边，Pretty Verifier 用正则把 terminal error 映到源码行，BPF Verifier Visualizer 提供一个前端交互式渲染逐指令状态，但都不定位 proof 在哪丢的。
+\sys reconstructs the proof lifecycle from the verifier's own printed state, recovering register types, scalar ranges, and pointer provenance~\cite{linuxkernel-bpf-verifier}.
+% \sys 从 verifier 自己打印的状态重建 proof 生命周期，恢复出寄存器类型、scalar 范围、指针 provenance。

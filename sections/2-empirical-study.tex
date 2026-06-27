@@ -66,10 +66,6 @@ We therefore label each bug with its root cause, the source-level error the deve
 % 因此我们给每个 bug 标注它的 root cause，即开发者犯的源码级错误。
 The 191 bugs fall into 12 root causes (Table~\ref{tab:mechanisms}), most specific to eBPF, such as proving a packet bound or pairing a dynptr with its lifetime.
 % 这 191 个 bug 落在 12 类 root cause（Table~\ref{tab:mechanisms}），多数是 eBPF 特有的，例如证明一个 packet bound、或把 dynptr 与其生命周期配对。
-Of the 12 root causes, only two also occur outside eBPF: missing null checks and out-of-bounds indexing.
-% 12 类 root cause 里只有两类在 eBPF 之外也会出现：缺失的 null check 和越界索引。
-Together these two cover 34 of the 191 bugs.
-% 这两类合计覆盖 191 个 bug 里的 34 个。
 
 \begin{tcolorbox}[colback=blue!5!white,colframe=gray!75!black,left=1mm, right=1mm, top=0.5mm, bottom=0.5mm, arc=1mm]
 \textbf{Takeaway \#1:} Most rejections (81\%) are program bugs, but 19\% reject correct source due to compiler, environment, or verifier issues. Of 12 root causes, 10 are eBPF-specific, so repair requires domain knowledge.
