@@ -37,8 +37,8 @@ We introduce \sys, which reconstructs where the required proof was established a
 % 我们提出 \sys，它从 verifier log 重建所需 proof 在哪建立、在哪丢失，并打印类似 Rust 的诊断信息（图~\ref{fig:overview}）。
 
 % 段6: LLM benchmark 结果
-To measure the ability of LLMs to fix verifier rejections, we construct \bench, a benchmark of 75 repair tasks with independent tests.
-% 为衡量 LLM 修复 verifier rejection 的能力，我们构建 \bench：一个带独立测试的 75 修复任务 benchmark。
+To measure the ability of LLMs to fix verifier rejections, we construct \bench, a benchmark of 75 repair tasks.
+% 为衡量 LLM 修复 verifier rejection 的能力，我们构建 \bench：一个 75 修复任务的 benchmark。
 With the raw verifier log, current LLMs achieve only 0--37\% one-shot repair across three models ranging from 3B to 27B parameters, showing that verifier rejections remain difficult even for capable models.
 % 用 raw verifier log 时，三个规模从 3B 到 27B 的模型 one-shot 修复率仅为 0--37\%，说明即使对能力较强的模型，verifier rejection 仍然困难。
 Replacing the log with the \sys localization improves repair by 11--21pp, with the gain largest at the stages where a repair must restore the verifier-visible proof.
@@ -54,8 +54,8 @@ This paper makes the following contributions:
 % 一项对 235 个复现 rejection 的实证研究，表明 terminal error 报告的是 verification 停下的位置，开发者需自己找 proof 在哪丢的（见第 2 节）。
 \item \sys, a technique that reconstructs where the required proof was established and lost from the verifier log~(\S\ref{sec:design}).
 % \sys：一种从 verifier log 重建所需 proof 在哪建立、在哪丢失的技术（见第 3 节）。
-\item \bench, a benchmark of 75 repair tasks with independent tests for evaluating LLM-based verifier repair~(\S\ref{sec:evaluation}).
-% \bench：一个带独立测试的 75 修复任务 benchmark，用于评估基于 LLM 的 verifier 修复（见第 4 节）。
+\item \bench, a benchmark of 75 repair tasks for evaluating LLM-based verifier repair~(\S\ref{sec:evaluation}).
+% \bench：一个 75 修复任务的 benchmark，用于评估基于 LLM 的 verifier 修复（见第 4 节）。
 \end{itemize}
 
 \input{figures/sec-1-overview}
