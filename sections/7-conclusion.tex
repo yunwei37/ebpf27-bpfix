@@ -1,0 +1,9 @@
+\section{Conclusion}
+\label{sec:conclusion}
+
+When the verifier rejects an eBPF program, its terminal error marks where verification stopped, which can lie far from where the program lost the required proof.
+% verifier 拒绝一个 eBPF 程序时，它的 terminal error 标的是 verification 停下的位置，而这可能离程序丢失 required proof 的地方很远。
+Reading only the rejection log, \sys reconstructs the required proof's lifecycle from the verifier's per-instruction states and localizes where the proof was lost.
+% \sys 只读 rejection log，从 verifier 逐指令的状态重建 required proof 的生命周期，定位 proof 是在哪丢的。
+On \testset, the \sys localization raises a downstream model's one-shot repair from 22 to 38 of the 75 cases, with every accepted fix passing the kernel verifier independently of \sys.
+% 在 \testset 上，\sys 的定位把一个下游模型的 one-shot 修复从 75 例里的 22 提到 38，而每个被接受的 fix 都是独立于 \sys 地通过内核 verifier 的。

@@ -1,80 +1,111 @@
 %%%%%%%%%%%%Outline%%%%%%%%%%%%%%%%%%
 
-% ==== opening: the three research questions ====
 %%%
-% message<the evaluation asks three questions: localization, attribution, and repair usefulness>
+% message<we evaluate \sys with three questions, each taking different evidence>
 % we evaluate \sys with three questions
-% RQ1 asks whether \sys localizes the proof break better than trusting the rejected line
-% RQ2 asks whether \sys assigns the correct failure class and beats a message-level baseline
-% RQ3 asks whether the structured diagnostic helps a developer repair the program
+% RQ1 asks whether the diagnostic is a more actionable basis for repair than the raw log
+% RQ2 asks what the diagnostic adds over the verifier message
+% RQ3 asks whether \sys identifies the layer when several layers share a message
 
-% ==== Setup ====
 %%%
-% message<bpfix-bench is a replay-disciplined corpus with independent tiered labels and three baselines>
-% we evaluate on bpfix-bench, 235 rejections reproduced under one pinned environment
-% the cases come from stack overflow 86, selftests 85, github commits 46, and issues 18
-% labels are hand-assigned from separate evidence, the classifier playing no part, so they stay independent
-% ground truth is tiered: 235 reproduce, 130 have an instruction-level root-cause index, 9 are adjudicated
-% we compare against three baselines: last-line localizer, message dictionary, and raw-log repair
+% message<two datasets: bpfix-test repair tasks with oracles for RQ1, bpfix-bench labeled rejections for RQ2 and RQ3>
+% we use two datasets
+% bpfix-test is 75 repair tasks, 40 proof-obligation and 35 from open-source projects (Cilium, xdp-tools, bpftime), each with an oracle
+% bpfix-bench is the 235 reproduced rejections from section 2, each with a hand-assigned layer
+% RQ1 runs on bpfix-test, RQ2 and RQ3 on bpfix-bench
 
-% ==== RQ1: Localizing the proof break ====
 %%%
-% message<the rejected line diverges from the cause per class, so the last-line baseline misses the hard classes; \sys's accuracy is pending>
-% a useful localizer must point at where the proof broke, which can differ from the rejected instruction
-% the table measures per class how often the root-cause index differs from the rejected index over 130 cases
-% the two differ for 19% source bugs, 33% lowering, 3/3 false positives, 0/5 environment, gap at most 13
-% the last-line baseline localizes source bugs well but misses the hard classes
-% \sys's own localization accuracy against this baseline is pending a fresh replay capture
+% message<we test whether the diagnostic enables more repairs than the raw log, judged by an oracle independent of \sys>
+% we test whether more rejected programs can be repaired from the diagnostic than from the raw log
+% we give a language model the buggy program with one of the two inputs, and it writes a candidate fix
+% an oracle independent of \sys accepts a fix only if the program loads through the verifier and passes the case's tests
+% we score each task at one shot and after one failure-informed retry, to test the diagnostic alone and whether the help persists
+% the primary model is Qwen3.6 27B, with the hosted GLM 5.2 and a small Qwen2.5 3B, at temperature zero
+% the 3B shows whether the gain depends on model capacity
 
-% ==== RQ2: Attributing the failure class ====
 %%%
-% message<\sys attributes the layer with heuristic signals; the measured comparison to a message baseline is pending>
-% attribution assigns each rejection the layer that must change, scored over 235 cases against the message dictionary
-% \sys reads 73 hand-written signals, and the false-positive verdict rests on only two precision signals, the weakest part
-% the message dictionary cannot recover lowering artifacts or false positives, which share messages with source bugs
-% the measured accuracy and confusion matrix are pending a fresh replay capture
+% message<the diagnostic raises repair under every model, so the gain comes from the diagnostic>
+% replacing the raw log with the diagnostic raises repair under every model
+% on 27B 22 from raw and 38 from the diagnostic one-shot, 30 vs 44 with retry
+% GLM agrees 28 to 38, the retry narrows the gap 47 to 52
+% the 3B repairs 0 from raw and 8 from the diagnostic one-shot, 10 with retry
+% the gain holds under three models, so it comes from the diagnostic
 
-% ==== RQ3: Helping repair ====
 %%%
-% message<bpfix-test shows that the structured diagnostic improves executable LLM repair>
-% to test downstream use we build bpfix-test, 75 source-level repair cases with executable oracles
-% the cases combine mechanism-designed programs and minimized real/tutorial seeds, and cover five verifier-failure mechanisms
-% an oracle passes only when the candidate compiles, loads, and satisfies functional and source-semantics checks
-% on Qwen3.6 27B, raw-log repair passes 22 of 75 and structured-diagnostic repair passes 38 of 75; with one retry they reach 30 and 44
+% message<the diagnostic removes verifier-load and source-semantics failures, helping the model satisfy the verifier and keep behavior>
+% we charge each failed candidate to the first stage it fails: return, compile, verifier-load, functional, source-semantics
+% the diagnostic mainly removes verifier-load and source-semantics failures, 19 to 10 and 22 to 16 on 27B
+% so it helps the model satisfy the verifier and preserve behavior
+% the 3B model-call failures are a length effect from raw prompts overflowing its context
 
-% ==== Threats to validity ====
 %%%
-% message<pending captures, small samples, single-adjudicator labels, working-suite status, and corpus skew bound the results>
-% the two pending results need every case's replay log, of which only one is in the artifact
-% the hard classes carry few cases, reported with raw counts
-% the adjudicated labels rest on a single adjudicator with agreement not yet measured
-% the repair suite is a working suite rather than a frozen heldout benchmark
-% the distance metric covers only the 130 same-numbering cases, and the source-bug skew bounds the rarer classes
+% message<RQ2 measures what the diagnostic adds over the bare message: the four repair fields it supplies>
+% the bare message names only the failing operation, but a repair needs more
+% RQ2 measures what the \sys diagnostic adds
+% we run \sys on all 235 rejections and record which of four repair fields each diagnostic supplies, against the message
+
+%%%
+% message<every diagnostic supplies the four fields the message lacks, on the development corpus>
+% every diagnostic supplies all four fields, the message none
+% an example shows the terminal line giving only the symptom while \sys adds all four
+% \sys produces a supported diagnostic for every corpus rejection across 21 families, though the corpus guided its development
+
+%%%
+% message<we find messages that span multiple layers and judge separation on the largest collision, grounded in upstream fixes>
+% a repair must change the right layer, yet one message can carry more than one
+% we search for messages spanning more than one layer and study the largest collision
+% the ground truth for each compiler case is the upstream build-level fix, independent of \sys
+% we compare \sys against a message dictionary and count correct assignments, as a case study
+
+%%%
+% message<the dictionary collapses the scalar collision to source bugs while \sys separates the lowering cases>
+% the scalar message reaches bpfix-bench 28 times, 24 source bugs and four lowering artifacts
+% the dictionary labels all 28 source bugs and recovers none of the four lowering cases
+% \sys reads where pointer provenance is lost and flags the four without mislabeling the source bugs
+% the ground truth is the upstream fix, which \sys did not produce
+% the false-positive layer is hardest to ground, so this study covers only lowering against source
+
+%%%
+% message<threats: working suite, label co-development, localization, small classes, one environment>
+% bpfix-test is a working suite, a frozen heldout split is future work
+% every number comes from one pinned kernel and compiler, verifier behavior is version-specific
+% the bpfix-bench class labels were developed alongside \sys, so we do not report accuracy against them
+% the fix site lies within 13 instructions of the rejected line, so \sys contributes through its diagnostic
+% the lowering and false-positive classes carry few cases, reported as raw counts
 
 %%%%%%%%%%%%Outline%%%%%%%%%%%%%%%%%%
 
 \section{Evaluation}
 \label{sec:evaluation}
 
-We evaluate \sys with three research questions:
+We evaluate \sys with three questions:
 \begin{itemize}
-  \item \textbf{RQ1 (localization).} Does \sys localize the instruction where the proof breaks more accurately than a baseline that trusts the rejected line?
-  \item \textbf{RQ2 (attribution).} Does \sys assign the correct failure class, and does it beat a message-level baseline on the hard classes?
-  \item \textbf{RQ3 (usefulness).} Does \sys's structured diagnostic help a developer repair the program?
+  \item \textbf{RQ1.} Is the \sys diagnostic a more actionable basis for repair than the raw verifier log?
+  \item \textbf{RQ2.} Does the \sys diagnostic supply the repair information the verifier message omits?
+  \item \textbf{RQ3.} Can \sys identify the responsible layer when several layers share one verifier message?
 \end{itemize}
 
-\noindent\textbf{Setup.} We evaluate on \emph{bpfix-bench}, a corpus of 235 verifier rejections that each build, load, are rejected, and capture a level-two trace under one pinned environment (kernel 6.15.11 and clang 18.1.3). The cases come from Stack Overflow (86), kernel selftests (85), GitHub commits (46), and GitHub issues (18). Each case's root-cause instruction and taxonomy class are hand-assigned from separate evidence, with the \sys classifier playing no part, so the labels stay independent of the tool they evaluate. Ground truth is tiered: all 235 reproduce as artifacts, 130 carry an instruction-level root-cause index on the replay numbering, and 9 carry adjudicated class labels. We compare \sys against three baselines: a last-line localizer that returns the rejected instruction, a message dictionary that maps the terminal message to a class, and one-shot repair from the raw verifier log.
+\noindent\textbf{Datasets.} We use two datasets. \testset holds 75 source-level repair tasks, 40 built around a verifier proof obligation and 35 minimized from open-source projects such as Cilium~\cite{cilium}, xdp-tools~\cite{xdptools}, and bpftime~\cite{zheng2025extending}, and each task ships the buggy program with an executable oracle. \bench holds the 235 reproduced rejections from \S\ref{sec:study:corpus}, each carrying a hand-assigned responsibility layer. RQ1 runs on \testset, and RQ2 and RQ3 run on \bench. 
+% \xiangyu{Add reference to \testset and \bench. Additionally, do we have baseline to compare?} 
 
-\noindent\textbf{RQ1: Localizing the proof break.} A useful localizer must point at where the proof broke, which can differ from the rejected instruction. Table~\ref{tab:rejection-cause-gap} measures, per class, how often the labeled root-cause instruction differs from the rejected instruction over the 130 instruction-localizable cases. The two differ for 19\% of source bugs and 33\% of lowering artifacts, for all 3 verifier false positives, and for none of the 5 environment cases, and the gap reaches at most 13 instructions. The last-line baseline therefore localizes source bugs well but misses the hard classes, where the rejected line and the cause carry different classes. \sys's own localization accuracy against this baseline, scored as exact and within-$k$ root-cause hits, is pending a fresh replay capture.
+\noindent\textbf{RQ1: Repair effectiveness.} We test whether more rejected programs can be repaired from the \sys diagnostic than from the raw verifier log. We give a language model the buggy program with either the raw log or the \sys diagnostic, and the model writes a candidate fix. An executable oracle independent of \sys accepts a fix only if the program loads through the kernel verifier and passes the case's functional and source-semantics tests. We score each task at one shot, to test the diagnostic on its own, and after one failure-informed retry, to test whether the help persists. Our primary model is Qwen3.6 27B, and we also run the hosted GLM 5.2 and a small Qwen2.5 3B at temperature zero. The 3B shows whether the gain depends on model capacity. 
 
-\input{tables/sec-5-cause-gap}
-
-\noindent\textbf{RQ2: Attributing the failure class.} Attribution assigns each rejection the layer that must change, scored against the hand-assigned label over all 235 cases and compared to the message dictionary. \sys reads 73 hand-written signals over the rich trace to make this call, and the false-positive verdict rests on only two precision signals, so attribution is the weakest part of the system. The message dictionary cannot recover the lowering-artifact and false-positive classes, since they share terminal messages with source bugs. The measured comparison, an accuracy and per-class confusion matrix, is pending a fresh replay capture, because the per-case replay logs the scorer needs are not yet in the artifact.
-
-\noindent\textbf{RQ3: Helping repair.} To test whether the structured diagnostic helps downstream repair, we build \emph{bpfix-test}, a 75-case source-level LLM repair suite with executable oracles. Each case contains a buggy BPF C program, the raw verifier log, the \sys diagnostic for the same rejection, a reference repair used only for admission checks, and a per-case oracle. The suite is organized by source family rather than by historical split: mechanism-designed standalone programs (40), Cilium (7), ActPlane (5), xdp-tools (5), AgentSight (4), bpf-developer-tutorial (4), bpftime (3), eunomia.dev (3), DatRail (2), NCCL-eBPF (1), and Tetragon (1). The cases cover proof-lifecycle loss, modern BPF protocol misuse, source/object correlation failures, helper memory contracts, and environment or configuration boundaries. A candidate passes only if it compiles, loads through the verifier, and satisfies the case's functional, proof-shape, source-semantics, and custom predicates; the model sees only the buggy source and either the raw log or the \sys diagnostic.
-
+Replacing the raw log with the \sys diagnostic raises repair under every model (Figure~\ref{fig:bpfix-test}). On Qwen3.6 27B, the model repairs 22 of the 75 cases from the raw log in one shot and 38 from the diagnostic, and one retry raises the two to 30 and 44. GLM 5.2 shows the same one-shot gain, 28 against 38, though the retry narrows the gap, 47 against 52. The small Qwen2.5 3B repairs none of the 75 from the raw log, and 8 from the diagnostic in one shot and 10 with one retry. Because the gain holds under three different models, it comes from the diagnostic.
+% \xiangyu{Is it OK to say that we can get similar results if we use other language models? If this is the case, we should say that.}
 \input{figures/sec-5-bpfix-test}
 
-Under the same Qwen3.6 27B model, temperature, prompt budget, timeout, and oracle, one-shot repair from the raw verifier log passes 22 of 75 cases, while repair from the \sys diagnostic passes 38 of 75. Allowing one failure-informed retry raises the raw-log result to 30 of 75 and the \sys result to 44 of 75. This shows that \sys improves the first repair signal and that the advantage remains after an ordinary retry loop. A hosted GLM 5.2 check shows the same one-shot direction, 28 to 38 of 75, but retry narrows the gap, 47 to 52 of 75, indicating that retry is a strong intervention for that model. A small local Qwen2.5 3B stress run passes 0 of 75 from raw logs and 8 of 75 with \sys, so the suite also separates model capacity from diagnostic help. These results support a controlled-usefulness claim for the current working suite; they do not by themselves make \emph{bpfix-test} a frozen heldout benchmark.
+To locate the gain, we charge each failed candidate to the first stage it fails: returning a program, compiling, loading through the verifier, passing the functional test, or passing the source-semantics test (Table~\ref{tab:failure-stage}). The diagnostic mainly removes verifier-load and source-semantics failures: on the 27B one-shot run, load failures fall from 19 to 10 and source-semantics failures from 22 to 16, while compile failures stay low. The diagnostic therefore helps the model both satisfy the verifier and preserve the program's behavior. The 3B's model-call failures are a length effect: three raw prompts overflowed its context window and returned no program, while the shorter diagnostic stayed within it.
 
-\noindent\textbf{Threats to validity.} The two pending results, \sys's localization accuracy and the attribution confusion matrix, both need the per-instruction replay log of every case, and only one such log is in the artifact, so we will produce them from a fresh kernel-6.15.11 replay capture. The hard classes carry few cases, so we report them with raw counts. The 9 adjudicated labels rest on a single adjudicator, and inter-annotator agreement is not yet measured. The repair suite is a working suite built during benchmark development, not a frozen heldout benchmark; before making benchmark-generalization claims, we need a no-touch heldout split with complete source-family and mechanism metadata and clean reruns for every headline configuration. The instruction-distance metric is defined only on the 130 cases that share the replay numbering, and the corpus's skew toward source bugs, 194 of 235, bounds what the rarer classes can show.
+\input{tables/sec-5-failure-stage}
+
+\noindent\textbf{RQ2: Diagnostic completeness.} The bare verifier message names only the failing operation, yet a repair needs more (\S\ref{sec:study}). RQ2 measures what the \sys diagnostic adds. We run \sys on each of the 235 \bench rejections and record, against the raw message, which of four repair fields each diagnostic supplies: a stable error id, the rejected source span, the safety proof the verifier needs, and a next action.
+
+Every diagnostic supplies all four fields, where the raw message supplies none. Figure~\ref{fig:diag-example} shows one rejection where the terminal line gives only the symptom and \sys adds all four. \sys produces a supported diagnostic for every rejection in the corpus, across 21 error families, with no fallback, though the same corpus guided \sys's development.
+
+\input{figures/sec-5-diagnostic-example}
+
+\noindent\textbf{RQ3: Layer attribution.} \sys reports the responsible layer as a best-effort heuristic (\S\ref{sec:design}). The \bench layer labels were developed alongside \sys, so we examine layer separation through a case study on one message that two layers share. The message \texttt{invalid mem access 'scalar'} prints in \bench for both source bugs and compiler-lowering rejections (\S\ref{sec:study}). We study one rejection of each kind, and the compiler-lowering rejection has correct source with an upstream fix that steers the compiler, so its layer holds independent of \sys.
+
+Figure~\ref{fig:layer-attr} shows the two rejections. Both print \texttt{invalid mem access 'scalar'}, yet \sys reports \texttt{source\_bug} for the integer-to-pointer cast in (a) and \texttt{lowering\_artifact} for the correctly bounds-checked packet pointer in (b). The message is identical, so \sys supplies the layer the message leaves out.
+
+\input{figures/sec-5-layer-attr}

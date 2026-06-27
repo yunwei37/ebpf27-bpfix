@@ -1,25 +1,13 @@
 \begin{figure}[t]
-  \noindent\textbf{\footnotesize (a) Real source bug (bcc biosnoop.bpf.c)}
-  \begin{lstlisting}[style=bpfix,language=C]
-// rq is a raw kernel pointer from a kprobe
-event.sector = rq->__sector;     // direct deref: rq is a scalar
-event.len    = rq->__data_len;
+  \begin{lstlisting}[style=bpfix,language=C,
+      linebackgroundcolor={\ifnum\value{lstnumber}=3 \color{lstgood!40}\fi}]
+// correct source; -O0 lowers the field read into a scalar
+static int add_one(int x) { return x + 1; }
+int prog(struct xdp_md *ctx) { return add_one(ctx->rx_queue_index) & 1; }
   \end{lstlisting}
   \begin{lstlisting}[style=bpflog]
-verifier: R1 invalid mem access 'scalar'
+verifier: R2 invalid mem access 'scalar'
   \end{lstlisting}
-
-  \vspace{3pt}
-  \noindent\textbf{\footnotesize (b) Compiler-lowering rejection (cilium nat.h)}
-  \begin{lstlisting}[style=bpfix,language=C]
-// correct source; lowering drops the packet-pointer provenance
-tuple.nexthdr = iphdr.nexthdr;
-hdrlen = ipv6_hdrlen_offset(ctx, inner_l3_off, &tuple.nexthdr, &fraginfo);
-  \end{lstlisting}
-  \begin{lstlisting}[style=bpflog]
-verifier: R7 invalid mem access 'scalar'
-  \end{lstlisting}
-
-  \caption{Two programs that reject with the same message, each shown with the verifier's output. (a) dereferences a kernel pointer directly, a real source bug fixed with a CO-RE read. (b) is correct source that the compiler lowered into an untracked packet-pointer path, fixed by forcing the value onto the stack. The two fixes are opposite. Of the 28 cases with this message, 23 are real source bugs, four are compiler-lowering rejections, and one is an environment issue.}
+  \caption{A compiler-lowering rejection: correct source that the verifier reports as \texttt{invalid mem access `scalar'}.}
   \label{fig:packet}
 \end{figure}

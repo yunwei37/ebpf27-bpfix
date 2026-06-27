@@ -1,64 +1,63 @@
-%%%%%%%%%%%%Outline%%%%%%%%%%%%%%%%%%
-
-%%%
-% message<a rejection returns one message that names the operation but under-determines the repair>
-% eBPF runs networking, security, and observability in the kernel
-% every program must clear a static verifier that rejects what it cannot prove safe
-% a rejection returns one message that names the failing operation
-% however the message under-determines the repair
-% the developer fixes the rejection by trial and error
-
-%%%
-% message<we assemble bpfix-bench and find the message leaves the bug, the layer, and the fix site to recover>
-% to learn what the message leaves out, we assemble bpfix-bench and find it leaves the bug, the layer, the fix site
-% one message maps to many bugs: the most frequent covers 28 across nine mechanisms
-% the message has no field for the layer, which can be source, compiler, environment, or verifier
-% the flagged operation is the fix site in only 25.5%
-% tools reading only the message inherit the gap
-% such tools restate the message or regenerate the program
-
-%%%
-% message<the discarded reasoning survives in the log, so reconstructing the proof and locating the loss is principled>
-% although the message omits all three, the verifier's reasoning survives in the log
-% a rejection is a safety proof built instruction by instruction but not completed
-% at the failing operation one needed fact cannot be proved
-% the verifier then discards the proof and prints the symptom
-% at log_level=2 the verifier records its abstract state after every instruction
-% a tool reads that record to reconstruct the proof and find where a needed fact was lost
-% reading the verifier's own states makes localization principled
-
-%%%
-% message<to recover the three we build \sys, a deterministic log-only tool, evaluated on localization and downstream repair>
-% to recover the bug, the layer, and the fix site, we build \sys, a deterministic tool that reconstructs the proof and locates the fix site
-% \sys reports the responsible layer, the weakest step, as best-effort
-% we evaluate \sys two ways
-% first, on bpfix-bench the labeled fix site lies within 13 instructions of the rejected line
-% second, we feed the diagnostic to a downstream repair model, a separate LLM, and test repair lift
-% on bpfix-test Qwen3.6 27B repairs 22 of 75 from raw and 38 from the diagnostic, 30 vs 44 with retry
-% we read this repair lift as controlled usefulness on a suite still being extended
-
-%%%
-% message<three contributions: the finding, the tool, the downstream-repair result>
-% we study rejections and show the message leaves the bug, the layer, and the fix site
-% we build \sys, a log-only tool that recovers the discarded proof and locates the fix site
-% we demonstrate \sys's diagnostic improves downstream LLM repair
-
-%%%%%%%%%%%%Outline%%%%%%%%%%%%%%%%%%
-
 \section{Introduction}
 \label{sec:introduction}
 
-eBPF now runs production networking, security, and observability inside the Linux kernel~\cite{gbadamosi2024ebpf}. Every program must first clear a static safety verifier, which rejects any program it cannot prove safe~\cite{gershuni2019simple}. A rejection returns one message that names the failing operation. However, the message under-determines the repair. The developer is left to fix the rejection by trial and error~\cite{deokar2024empirical}.
+eBPF lets developers run custom programs inside the Linux kernel on the performance-critical paths of networking, security, and observability~\cite{gbadamosi2024ebpf, cilium}.
+% eBPF 让开发者在内核里、网络/安全/可观测性的性能关键路径上运行自定义程序。
+A developer writes an eBPF program in C or Rust, compiles it to BPF bytecode with Clang and LLVM, and loads the bytecode into the running kernel.
+% 开发者用 C 或 Rust 写 eBPF 程序，用 Clang/LLVM 编译成 BPF 字节码，再加载进运行中的内核。
+Before the kernel runs the program, a static verifier must prove the program safe, exploring every path and tracking an abstract value for each register and stack slot~\cite{gershuni2019simple, linuxkernel-bpf-verifier}.
+% 在内核运行该程序前，静态 verifier 必须证明它安全：遍历每条路径，为每个寄存器和栈槽跟踪一个抽象值。
 
-To learn what the message leaves out, we assemble \bench, a corpus of 235 reproduced rejections, and find that the message leaves the developer to recover the bug, the responsible layer, and the fix site. One message can map to many bugs; the most frequent covers 28 rejections across nine source mechanisms. The message carries no field for the responsible layer, which can be the developer's source, the compiler, the environment, or the verifier. The flagged operation is the fix site in only 25.5\% of cases. Tools that read only this message inherit the gap. Such tools either restate the message~\cite{rizza2025design} or regenerate the program to sidestep the rejection~\cite{zheng2024kgent,jia2025rex}.
+When the verifier rejects a program, the terminal error it returns identifies the rejection location, the operation where verification stopped, which can lie far from where the program lost the required proof.
+% verifier 拒绝程序时，它返回的 terminal error 指出 rejection location，也就是 verification 停下来的那个 operation，而它可能离程序丢失所需 proof 的地方很远。
+On rejection the verifier returns a log of bytecode and register states ending in this terminal error~\cite{linuxkernel-bpf-verifier}.
+% 被拒时，verifier 返回一串字节码和寄存器状态的 log，末尾就是这行 terminal error。
+In Figure~\ref{fig:overview}, a packet pointer that the program bounds-checks is rejected at a later load with \texttt{R5 invalid mem access `scalar'}, on a line the developer has no reason to suspect.
+% 图 1 里，一个程序已经 bounds-check 过的 packet pointer，仍在后续一次 load 处被 \texttt{R5 invalid mem access 'scalar'} 拒绝，而出错的行开发者根本想不到有问题。
+The distance between where the verifier reports the rejection and where the program lost the proof is the diagnostic gap.
+% verifier 报告 rejection 的地方，和程序真正丢失 proof 的地方，二者之间的距离，就是 diagnostic gap。
+Unable to close this gap from the terminal error alone, the developer resorts to repeated trial and error~\cite{deokar2024empirical}.
+% 单凭 terminal error 没法弥合这个 gap，开发者只能反复试错。
 
-Although the message omits all three, the verifier's reasoning survives in the log. A rejection is a safety proof the verifier builds instruction by instruction but cannot complete. At the failing operation one needed fact cannot be proved. The verifier then discards the proof and prints the symptom. Under \texttt{log\_level=2}, the verifier records its abstract state after every instruction~\cite{linuxkernel-bpf-verifier,vishwanathan2022sound}. A tool can read that record to reconstruct the discarded proof and find where a needed safety fact was lost. Reading the verifier's own states makes this localization principled.
+Existing eBPF tools read the terminal error to recover the failing location, but none localizes where the required proof was lost~\cite{rizza2025design, bpfvv}.
+% 现有 eBPF 工具靠读 terminal error 来恢复失败位置，但没有一个能定位 required proof 是在哪丢的。
+PrettyVerifier maps the terminal error to a C source line and rewords it using the source and debug information~\cite{rizza2025design}.
+% PrettyVerifier 把 terminal error 映到一个 C 源码行，并结合源码与调试信息把它重述。
+The BPF Verifier Visualizer accumulates the verifier's per-instruction register states~\cite{bpfvv}.
+% BPF Verifier Visualizer 把 verifier 逐指令的寄存器状态累积起来。
+Even so, one terminal error comes from many root causes, and cannot show where the program lost the proof.
+% 即便如此，一行 terminal error 来自许多 root cause，看不出程序在哪丢了这条 proof。
 
-To recover the bug, the layer, and the fix site that the message omits, we build \sys, a deterministic userspace tool that reconstructs the discarded proof from the log and locates the fix site. \sys also reports the responsible layer, the weakest step, as a best-effort heuristic. We evaluate \sys two ways. First, on \bench the labeled fix site lies within 13 instructions of the rejected line. Second, we feed the \sys diagnostic to a downstream repair model, a separate large language model, and test whether the diagnostic raises repair success. On \testset, a 75-case repair suite, Qwen3.6 27B repairs 22 of 75 from the raw log and 38 from the diagnostic in one shot, and 30 versus 44 with one retry. We read this repair lift as a controlled usefulness result on a suite still being extended.
+Recovering the lost proof is hard because the verifier exposes no structured artifact to localize against.
+% 之所以难以恢复丢失的 proof，是因为 verifier 没有暴露任何可供定位的结构化制品。
+Localizers in other settings walk a structure the checker builds, such as a source abstract syntax tree (AST) or typing constraints, but the eBPF verifier exposes none~\cite{pavlinovic2014finding, zhang2014toward}.
+% 别的场景里，定位器会走一个 checker 本来就构建好的结构，例如源码 abstract syntax tree（AST）或类型约束，而 eBPF verifier 一个都不暴露。
+The insight behind \sys is that the discarded proof survives in the log.
+% \sys 的 insight 是：被丢弃的 proof 其实留在了 log 里。
+The verifier builds a safety proof instruction by instruction and discards it at the rejection location, but under \texttt{log\_level=2} the verifier prints its abstract state after every instruction~\cite{linuxkernel-bpf-verifier}.
+% verifier 逐指令构建一个 safety proof 并在 rejection location 处丢弃它，但在 \texttt{log\_level=2} 下它会在每条指令后打印它的抽象状态。
+From the printed state, a tool reconstructs the lifecycle of the required proof, a structure that serves localization as a source AST does elsewhere.
+% 从这些打印出的状态，工具就能重建 required proof 的生命周期，这个结构对定位的作用，正如源码 AST 之于别的定位器。
 
-\noindent\textbf{Contributions.} This paper makes the following contributions:
+\sys is a userspace tool that localizes a rejection by reconstructing the proof lifecycle from the rejection log alone.
+% \sys 是一个 userspace 工具，它只凭 rejection log 重建 proof 生命周期来定位 rejection。
+From the log, \sys maps the terminal error to the required proof and replays it across the printed states, recording where the proof is established, lost, and needed.
+% 从这份 log，\sys 把 terminal error 映成 required proof 并在打印出的状态上回放，记录 proof 在哪建立、在哪丢失、在哪被需要。
+Figure~\ref{fig:overview} shows the resulting diagnostic, where \sys reports the established-to-lost transition as a proof-break witness across spans mapped back to the source.
+% 图 1 给出这个诊断：\sys 把“建立到丢失”的转移点作为一个 proof-break witness，报告在若干映回源码的 span 上。
+
+Replacing the raw verifier log with the \sys localization raises one-shot repair across the three downstream models we test, from 22 to 38 of 75 on the strongest, with each fix judged by an oracle independent of \sys.
+% 把 raw verifier log 换成 \sys 的定位结果，在我们测试的三个下游模型上都提升了 one-shot 修复，最强模型从 75 例中的 22 提到 38，每个 fix 由一个独立于 \sys 的 oracle 判定。
+
+This paper makes the following contributions:
+% 本文的贡献如下：
 \begin{itemize}
-\item We study eBPF verifier rejections and show that the message leaves the bug, the responsible layer, and the fix site for the developer to recover.
-\item We build \sys, a log-only tool that recovers the verifier's discarded proof and locates the fix site.
-\item We demonstrate that \sys's diagnostic improves downstream LLM repair.
+\item An empirical study on \bench showing the terminal error reports where verification stopped, leaving the proof loss to find~(\S\ref{sec:study}).
+% 一项在 \bench 上的实证研究：表明 terminal error 报告的是 verification 停下来的位置，把 proof 的丢失点留给开发者去找（见第 2 节）。
+\item \sys, a log-only, deterministic technique that localizes a rejection by reconstructing the required proof's lifecycle and reporting a proof-break witness~(\S\ref{sec:design}).
+% \sys：一种只读 log、deterministic 的技术，靠重建 required proof 的生命周期、报告 proof-break witness 来定位 rejection（见第 3 节）。
+\item \bench, 235 reproduced rejections with ground-truth fixes, and \testset, 75 repair tasks with \sys-independent oracles~(\S\ref{sec:study}, \S\ref{sec:evaluation}).
+% \bench（235 个复现 rejection、带 ground-truth fix）与 \testset（75 个修复任务、带独立 oracle）两个数据集（见第 2、4 节）。
 \end{itemize}
+
+\input{figures/sec-1-overview}

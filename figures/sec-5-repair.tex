@@ -1,6 +1,6 @@
 \begin{figure}[t]
   \centering
   \includegraphics[width=\columnwidth]{figures/repair.pdf}
-  \caption{Programs repaired on \testset (of 75) from the raw verifier log against the \sys diagnostic, at one attempt (left) and at two attempts (right), on the same scale. The second attempt is one failure-informed retry. \sys leads in every condition. Qwen2.5-3B is a one-attempt capacity-stress baseline, so it appears only in the one-attempt panel.}
+  \caption{Two rejections that share the verifier message \texttt{invalid mem access 'scalar'} but need fixes in different layers: a source bug (a) and a compiler-lowering artifact (b). Each diagnostic is abridged to its error id, class, and the verifier line it explains.}
   \label{fig:repair}
 \end{figure}

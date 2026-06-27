@@ -3,9 +3,11 @@
 \usepackage{microtype}
 \setlength{\emergencystretch}{3em}
 \usepackage{array}
+\usepackage{float}
 \usepackage{tikz}
 \usetikzlibrary{arrows.meta,positioning,decorations.pathreplacing}
 \usepackage{listings}
+\usepackage{lstlinebgrd}
 
 \definecolor{lstkw}{HTML}{0033B3}
 \definecolor{lstcmt}{HTML}{6A737D}
@@ -33,6 +35,7 @@
   language=bash,
   basicstyle=\ttfamily\fontsize{6}{7}\selectfont,
   backgroundcolor=\color{lstlogbg},
+  numbers=none,
   keywordstyle=\color{lstkw}\bfseries,
   frame=single, framesep=2pt, rulecolor=\color{black!25},
   columns=fixed, basewidth=0.5em,
@@ -44,6 +47,7 @@
 \lstdefinestyle{bpfdiag}{%
   basicstyle=\ttfamily\fontsize{6}{7}\selectfont,
   backgroundcolor=\color{lstdiagbg},
+  numbers=none,
   frame=single, framesep=2pt, rulecolor=\color{black!25},
   columns=fixed, basewidth=0.5em,
   breaklines=true, breakatwhitespace=true,

@@ -1,4 +1,4 @@
-%%
+ %%
 %% This is file `sigconf.tex',
 %% generated with the docstrip utility.
 %%
@@ -46,6 +46,18 @@
 %%
 % \documentclass[sigconf]{acmart}
 \documentclass[sigplan,10pt,anonymous]{acmart}
+\usepackage{xcolor}
+
+\newif\ifshowcomments
+\showcommentstrue
+% \showcommentsfalse
+
+\newcommand{\xiangyu}[1]{%
+\ifshowcomments
+{\color{blue}[Xiangyu: #1]}
+\fi
+}
+
 \renewcommand\footnotetextcopyrightpermission[1]{}
 %%
 %% \BibTeX command to typeset BibTeX logo in the docs
@@ -105,7 +117,7 @@
 %%
 %% The "title" command has an optional parameter,
 %% allowing the author to define a "short title" to be used in page headers.
-\title{From Rejection to Fix: Recovering the eBPF Verifier's Discarded Proof}
+\title{Characterizing and Bridging the Diagnostic Gap in eBPF Verifier Rejections}
 
 %%
 %% The "author" command and its associated commands are used to define
@@ -189,7 +201,8 @@
 \input{sections/3-design}
 \input{sections/4-evaluation}
 \input{sections/5-related-work}
-\input{sections/6-conclusion}
+\input{sections/6-future-work}
+\input{sections/7-conclusion}
 
 %%
 %% The next two lines define the bibliography style to be used, and

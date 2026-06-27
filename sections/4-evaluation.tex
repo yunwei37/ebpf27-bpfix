@@ -1,90 +1,131 @@
-%%%%%%%%%%%%Outline%%%%%%%%%%%%%%%%%%
-
-%%%
-% message<we evaluate whether the diagnostic carries correct, usable repair signal the raw message lacks, with three questions>
-% we evaluate \sys with three questions
-% RQ1 asks whether the diagnostic raises executable repair over the raw log
-% RQ2 asks whether \sys diagnoses every rejection in the corpus
-% RQ3 asks whether \sys identifies the layer when several layers share a message
-% RQ1 is the quantitative result with an independent oracle, RQ2 and RQ3 characterize the diagnostic as coverage and a case study
-
-%%%
-% message<two datasets, one per kind of question: bpfix-test with an independent oracle for RQ1, bpfix-bench for RQ2 and RQ3>
-% the evaluation uses two datasets, one per kind of question
-% RQ1 runs on bpfix-test, 75 repair tasks, 40 proof-obligation and 35 from real projects
-% an executable oracle compiles, loads, and runs functional and source-semantics checks, none consulting \sys
-% a model repairs each task from the buggy source plus the raw log or the \sys diagnostic, the only difference
-% RQ2 and RQ3 run on bpfix-bench, the 235 rejections, against the message and a dictionary
-
-%%%
-% message<replacing the raw log with the diagnostic raises executable repair across three models>
-% replacing the raw log with the \sys diagnostic raises executable repair
-% on Qwen3.6 27B the model repairs 22 from raw and 38 from the diagnostic at one attempt, 30 vs 44 at two attempts
-% a hosted GLM 5.2 agrees at one attempt 28 to 38, the second attempt narrows the gap 47 to 52
-% a small Qwen2.5 3B repairs 0 from raw and 8 from the diagnostic, separating capacity from signal
-% the oracle is independent, so a passing repair shows the diagnostic carried correct usable signal
-
-%%%
-% message<the failure-stage breakdown shows the diagnostic removes verifier-load and source-semantics failures>
-% the failure-stage table records the stage at which each failed attempt stops
-% the diagnostic mainly removes verifier-load and source-semantics failures, 19 to 10 and 22 to 16 on 27B
-% so the diagnostic helps the model satisfy the verifier and preserve behavior
-% the model-call failures are a small-model effect from raw prompts overflowing the 3B context
-
-%%%
-% message<\sys produces a structured diagnostic for every rejection in the corpus, recovering fields the message omits>
-% \sys produces a supported diagnostic for every rejection, spanning 21 error families
-% each diagnostic adds an error id, a rejected span, a required proof, and a next action
-% an example shows \sys recovering all four where the terminal line gives only the symptom
-% these fields are what the model receives beyond the raw log, explaining the repair gain
-% we report coverage and field presence, since a present field can still be wrong
-
-%%%
-% message<one verifier message is shared across layers, and \sys separates the compiler-lowering cases that share a source-bug message>
-% a single verifier message can carry more than one responsible layer
-% the scalar message reaches bpfix-bench 28 times, 24 source bugs and four lowering artifacts
-% the four lowering cases are real upstream commits whose fix changes how the program is compiled
-% a message-only tool must label all 28 the same, and the dictionary calls every one a source bug
-% \sys reads where the trace loses pointer provenance and flags the four as lowering
-% the false-positive layer is the hardest to ground, so we report it as a threat
-
-%%%
-% message<threats: working suite, prompt-length confound, label co-development, localization, small classes, one environment>
-% bpfix-test is a working suite built during development, on one pinned kernel and compiler
-% the diagnostic prompt is shorter than the raw log, so we flag prompt length and leave the trimmed-log control to future work
-% the bpfix-bench class labels were developed alongside \sys, so we do not report accuracy against them
-% the fix site lies within 13 instructions of the rejected line, so localization distance is not where \sys adds value
-% the lowering and false-positive classes carry few cases, reported as raw counts
-
-%%%%%%%%%%%%Outline%%%%%%%%%%%%%%%%%%
-
 \section{Evaluation}
 \label{sec:evaluation}
 
-We evaluate \sys with three questions:
-\begin{itemize}
-  \item \textbf{RQ1.} Does a downstream model repair more programs from the \sys diagnostic than from the raw verifier log?
-  \item \textbf{RQ2.} Does \sys produce a structured diagnostic across the rejections in \bench?
-  \item \textbf{RQ3.} Can \sys identify the responsible layer when several layers share one verifier message?
-\end{itemize}
-RQ1 is the quantitative result, scored by an oracle independent of \sys. RQ2 and RQ3 characterize the diagnostic itself, reported as coverage and a case study.
+This section evaluates the \sys diagnostic with two case studies and a repair measurement.
+% 本节用两个 case study 和一个修复测量来评估 \sys 的 diagnostic。
+We first run two case studies on \bench: one rejection where the diagnostic recovers the repair information the terminal message omits, and a pair where it separates the responsible layer behind a shared message.
+% 我们先在 \bench 上做两个 case study：一个 rejection 展示 diagnostic 从 terminal message 里恢复出被省略的修复信息，一对 rejection 展示它如何区分一条共享 message 背后的责任 layer。
+We then measure on \testset whether replacing the raw verifier log with the \sys diagnostic raises downstream repair, counting only the fixes that an oracle independent of \sys accepts.
+% 然后我们在 \testset 上测量：把 raw verifier log 换成 \sys diagnostic 是否提升下游修复，只数那些被独立于 \sys 的 oracle 接受的 fix。
 
-\noindent\textbf{Datasets.} The evaluation uses two datasets, one per kind of question. RQ1 runs on \testset, 75 source-level repair tasks, 40 built around a verifier proof obligation and 35 minimized from real projects. An executable oracle scores each candidate by compiling it, loading it through the verifier, and running functional and source-semantics checks, none of which consults \sys. A model repairs each task from the buggy source plus either the raw log or the \sys diagnostic, the only difference between the prompts. RQ2 and RQ3 run on \bench (\S\ref{sec:study:corpus}), the 235 reproduced rejections, where the baselines are the raw verifier message and a dictionary that maps each terminal message to its most frequent layer.
+\noindent\textbf{Setup.} The two case studies draw on \bench, the 235 reproduced rejections of \S\ref{sec:study:corpus}.
+% 两个 case study 用的是 \bench，也就是 \S\ref{sec:study:corpus} 里那 235 个复现 rejection。
+The repair measurement uses \testset, 75 source-level repair tasks, 40 built around verifier proof obligations and 35 minimized from open-source projects such as Cilium~\cite{cilium}, xdp-tools~\cite{xdptools}, and bpftime~\cite{zheng2025extending}.
+% 修复测量用 \testset：75 个源码级修复任务，其中 40 个围绕 verifier proof obligation 构造、35 个从 Cilium、xdp-tools、bpftime 这类开源项目最小化而来。
+Each task ships the buggy program with an executable oracle independent of \sys, which accepts a fix only if it loads through the kernel verifier and passes the case's functional and source-semantics tests.
+% 每个任务都带出错程序和一个独立于 \sys 的可执行 oracle，它只在修复通过内核 verifier 加载、并通过该 case 的功能和源码语义测试时才接受。
 
-\noindent\textbf{RQ1: Repairing the program.} Replacing the raw log with the \sys diagnostic raises executable repair. Under a fixed Qwen3.6 27B configuration, the model repairs 22 of the 75 cases from the raw verifier log at one attempt, and 38 from the \sys diagnostic (Figure~\ref{fig:bpfix-test}). A second attempt, a single failure-informed retry, raises the two to 30 and 44. The hosted GLM 5.2 shows the same one-attempt gain, 28 against 38, though the second attempt narrows the gap, 47 against 52. The small Qwen2.5 3B repairs none of the 75 from the raw log, 8 from the diagnostic in one shot, and 10 with one retry, which separates model capacity from diagnostic signal. Because the oracle checks the program itself, a passing repair is direct evidence that the diagnostic carried correct and usable repair signal that the raw log did not.
+\subsection{Recovering the Missing Repair Information}
+\label{sec:eval-diagnostic-completeness}
 
-\input{figures/sec-5-bpfix-test}
+The verifier's terminal message names the operation where verification stopped, but a repair needs more: which proof the program failed to keep, and where it lost that proof.
+% verifier 的 terminal message 点出 verification 停下的那个 operation，但修复需要更多：程序没能保住哪条 proof、又在哪丢的。
+We examine one rejection from the aya project.
+% 我们细看 aya 项目里的一个 rejection。
 
-To see what the diagnostic fixes, Table~\ref{tab:failure-stage} records the stage at which each failed attempt stops. The \sys diagnostic mainly removes verifier-load and source-semantics failures: on the 27B one-attempt run, load failures fall from 19 to 10 and source-semantics failures from 22 to 16, while compile failures stay low. The diagnostic therefore helps the model both satisfy the verifier and preserve the program's behavior, the proof obligation the raw message leaves implicit. The model-call failures are a small-model effect: three raw prompts overflowed the 3B model's context window, so it returned no program, while the shorter diagnostic stayed within the window.
+As shown in Figure~\ref{fig:diag-example}, the program treats the map object \texttt{\&globals} as a map-value pointer, casting its address to \texttt{\_\_u64 *} and reading and writing through the result.
+% 如图~\ref{fig:diag-example} 所示，程序把 map 对象 \texttt{\&globals} 当成 map-value 指针，把它的地址 cast 成 \texttt{\_\_u64 *}，再通过结果读写。
+The verifier rejects the write with the terminal line \texttt{only read from bpf\_array is supported}.
+% verifier 用末行 \texttt{only read from bpf\_array is supported} 拒绝这次写。
+The line is correct, but it gives only the symptom: the verifier sees a write through the map object where a map value is required.
+% 这行没错，但只给了 symptom：verifier 看到的是通过 map 对象本身的写，而那里需要的是一个 map value。
 
-\input{tables/sec-5-failure-stage}
-
-\noindent\textbf{RQ2: Diagnostic coverage.} \sys produces a structured diagnostic for every rejection in \bench, with no fallback, and the diagnostics span 21 error families. Each diagnostic adds a stable error id, the rejected source span, the safety proof the program must restore, and a concrete next action. Figure~\ref{fig:diag-example} shows a rejection whose terminal line reads only \texttt{only read from bpf\_array is supported}, where \sys recovers all four. These fields are what the downstream model receives beyond the raw log, which is why the diagnostic helps in RQ1. We report coverage and field presence: a field can be present and still point at the wrong place, so correctness comes from the independent oracle in RQ1.
+From the same log, \sys reconstructs the lost proof.
+% 从同一份 log，\sys 重建出丢失的 proof。
+The diagnostic states the proof the rejected write needs, a map-value pointer derived through a map helper before any access to map contents.
+% diagnostic 点明被拒的写需要的 proof：在读写 map 内容前，先用 map helper 派生出一个 map-value 指针。
+It then localizes the loss to the cast that produced a raw map-object pointer.
+% 然后它把丢失点定位到那个产生原始 map-object 指针的 cast。
+As shown in Figure~\ref{fig:diag-example}, the developer's fix follows that proof: it calls \texttt{bpf\_map\_lookup\_elem}, checks the returned pointer, and updates the value through the result.
+% 如图~\ref{fig:diag-example} 所示，开发者的修复正照这条 proof：调用 \texttt{bpf\_map\_lookup\_elem}、检查返回指针、再通过结果更新值。
+The terminal line gives only the rejected operation, while the diagnostic recovers the lost proof and the point where the program lost it.
+% terminal line 只给出被拒的 operation，而 diagnostic 恢复了丢失的 proof、以及程序丢失它的那个位置。
 
 \input{figures/sec-5-diagnostic-example}
 
-\noindent\textbf{RQ3: Separating the responsible layer.} One verifier message can carry more than one responsible layer. The message \texttt{R invalid mem access 'scalar'} reaches \bench 28 times, as 24 source bugs and four compiler-lowering artifacts (Figure~\ref{fig:packet}). The four lowering cases are real upstream commits whose fix changes how the program is compiled (Table~\ref{tab:lowering}). A tool that reads only the message must label all 28 the same. The message dictionary labels every one a source bug. \sys reads the point in the trace where a packet or map pointer loses its provenance, and flags the four as lowering artifacts. The ground truth here is the upstream fix itself, which \sys did not produce. The verifier false positive layer is the hardest to ground, because calling a rejection a false positive rests on a human judgment that the program was correct, so we report that layer as a threat.
+\subsection{Separating the Responsible Layer}
+\label{sec:eval-layer-attribution}
 
-\input{tables/sec-5-lowering}
+A second diagnostic gap is that one terminal verifier message can call for repairs in different layers.
+% 第二个 diagnostic gap 是：同一条 terminal verifier message 可能对应不同 layer 的修复。
+\sys reports the responsible layer as a best-effort attribution, so we inspect whether it separates two rejections that share one message but belong to different layers.
+% \sys 把责任 layer 作为 best-effort 归因报告，所以我们检视它能否区分两个共享同一条 message、却属于不同 layer 的 rejection。
 
-\noindent\textbf{Threats to validity.} \testset is a working suite built during development, so it is not a frozen heldout benchmark, and every number comes from one pinned kernel 6.15.11 with clang 18, whose verifier behavior is version-specific. The \sys diagnostic prompt is shorter than the raw log, so part of the repair gain could come from length; we leave the equal-budget trimmed-log control to future work. The \bench class labels were developed alongside \sys, so we do not report classification accuracy against them, which is why RQ2 scores field presence and RQ1 scores against the independent oracle. The labeled fix site lies within 13 instructions of the rejected line, so localization distance is not where \sys adds value. The lowering and false positive classes carry few cases, which we report as raw counts.
+Figure~\ref{fig:layer-attr} shows two rejections that both end with \texttt{invalid mem access `scalar'}.
+% 图~\ref{fig:layer-attr} 给出两个都以 \texttt{invalid mem access 'scalar'} 结尾的 rejection。
+In Figure~\ref{fig:layer-attr}(a), the program constructs a packet pointer by casting an integer offset, \texttt{(void *)(sizeof(*eth) + nh\_off)}.
+% 在图~\ref{fig:layer-attr}(a) 中，程序用一个整数 offset 强转出 packet 指针：\texttt{(void *)(sizeof(*eth) + nh\_off)}。
+The resulting value has no verifier-tracked packet base, so the later packet-field load uses a scalar where the verifier requires a real pointer.
+% 得到的值没有 verifier 跟踪的 packet base，于是后面那次 packet 字段 load 在需要真指针的地方用了一个 scalar。
+\sys reports \texttt{source\_bug}: the source never establishes the pointer provenance the rejected load requires.
+% \sys 报 \texttt{source\_bug}：源码从未建立被拒 load 所需的指针 provenance。
+
+In Figure~\ref{fig:layer-attr}(b), the source expresses the intended packet-bound proof, deriving \texttt{udph} from an IPv4 or IPv6 header and bounds-checking it against \texttt{data\_end} before the read.
+% 在图~\ref{fig:layer-attr}(b) 中，源码表达了它想要的 packet-bound proof：从 IPv4 或 IPv6 头派生出 \texttt{udph}，在读取前对着 \texttt{data\_end} 做边界检查。
+The rejection arises after compiler lowering merges the branch and hides the verifier-recognized packet-pointer type before the load.
+% 这次 rejection 是在编译器 lowering 合并分支、在 load 前把 verifier 认得的 packet 指针类型藏掉之后才出现的。
+The upstream fix steers the compiler and leaves the source logic unchanged, so the layer label holds independently of \sys.
+% 上游的修复是去引导编译器、不动源码逻辑，所以这个 layer 标签独立于 \sys 也成立。
+\sys reports the case as \texttt{lowering\_artifact}.
+% \sys 把这个 case 报为 \texttt{lowering\_artifact}。
+On these two rejections, \sys reports a different layer for each, separating a source bug from a lowering artifact behind one terminal message.
+% 在这两个 rejection 上，\sys 各报了不同的 layer，把一条 terminal message 背后的 source bug 和 lowering artifact 区分开。
+
+\input{figures/sec-5-layer-attr}
+
+\subsection{Repair Effectiveness at Scale}
+\label{sec:eval-repair-effectiveness}
+
+The two case studies show that \sys exposes the repair information the terminal verifier message omits.
+% 两个 case study 表明 \sys 暴露了 terminal verifier message 省略掉的修复信息。
+We now test whether that information improves end-to-end repair on \testset.
+% 现在我们测试这些信息是否提升 \testset 上的端到端修复。
+For each task, a model receives the buggy program with either the raw verifier log or the \sys diagnostic and writes a candidate fix for the oracle to judge.
+% 对每个任务，模型拿到出错程序加 raw verifier log 或 \sys diagnostic 之一，写出一个候选 fix 交给 oracle 判定。
+Because the oracle is independent of \sys, a fix earns credit only by passing the same checks a correct program must pass.
+% 因为 oracle 独立于 \sys，一个 fix 只有通过一个正确程序同样要过的那些检查才算数。
+
+We score each task in two modes.
+% 我们用两种模式给每个任务打分。
+The one-shot mode tests the diagnostic on its own, and the retry mode allows one failure-informed retry to test whether the help persists.
+% one-shot 模式测 diagnostic 单独是否有用；retry 模式允许一次带失败反馈的重试，测帮助是否还在。
+Our primary model is Qwen3.6 27B, and we also run the hosted GLM 5.2 and the smaller Qwen2.5 3B at temperature zero.
+% 主模型是 Qwen3.6 27B，另外在 temperature 0 下跑托管的 GLM 5.2 和更小的 Qwen2.5 3B。
+We include the small 3B model to see whether the gain survives at low model capacity.
+% 我们加入小的 3B 模型，看这个提升在低模型容量下是否还在。
+
+Replacing the raw verifier log with the \sys diagnostic raises repair for every model, as shown in Figure~\ref{fig:bpfix-test}.
+% 把 raw verifier log 换成 \sys diagnostic，每个模型的修复都上升，如图~\ref{fig:bpfix-test} 所示。
+On Qwen3.6 27B, one-shot repair rises from 22 of 75 cases with the raw log to 38 with the diagnostic, and one retry raises the two counts to 30 and 44.
+% 在 Qwen3.6 27B 上，one-shot 修复从 raw log 的 75 例中 22 升到 diagnostic 的 38，一次重试把两者抬到 30 和 44。
+GLM 5.2 shows the same pattern, from 28 to 38 in one shot and 52 against 47 with the retry.
+% GLM 5.2 走向一致：one-shot 从 28 到 38，retry 时 52 对 47。
+The small Qwen2.5 3B repairs none of the 75 from the raw log, and 8 from the diagnostic in one shot and 10 with one retry.
+% 小模型 Qwen2.5 3B 从 raw log 一个都修不出，从 diagnostic 在 one-shot 修出 8 个、retry 10 个。
+The gain holds across all three models, which points to the diagnostic as its source.
+% 这个提升在三个模型上都成立，说明来源是 diagnostic。
+
+\input{figures/sec-5-bpfix-test}
+
+To locate the gain, we charge each failed one-shot candidate to the first stage it fails: returning a program, compiling, loading through the verifier, passing the functional test, or passing the source-semantics test.
+% 为定位提升来自哪里，我们把每个失败的 one-shot 候选归到它第一个失败的阶段：返回程序、编译、过 verifier 加载、过功能测试、过源码语义测试。
+As Table~\ref{tab:failure-stage} shows, the diagnostic mainly reduces verifier-load and source-semantics failures.
+% 如表~\ref{tab:failure-stage} 所示，diagnostic 主要减少 verifier 加载失败和源码语义失败。
+On Qwen3.6 27B, load failures fall from 19 to 10 and source-semantics failures from 22 to 16, and GLM 5.2 shows the same two reductions, from 10 to 5 and from 25 to 22, with compile failures staying low for both models.
+% 在 Qwen3.6 27B 上，加载失败从 19 降到 10、源码语义失败从 22 降到 16；GLM 5.2 是同样两处下降，从 10 到 5、从 25 到 22，两个模型的编译失败都很低。
+
+For the small Qwen2.5 3B, the raw log is often too weak a repair signal: 62 one-shot candidates still fail at verifier load, and three raw-log prompts exceed the model's context window and return no program.
+% 对小模型 Qwen2.5 3B，raw log 常常是太弱的修复信号：62 个 one-shot 候选仍在 verifier 加载处失败，还有三个 raw-log prompt 超出模型上下文窗口、没返回程序。
+With the shorter \sys diagnostic, model-call failures disappear and verifier-load failures fall to 39, though compile failures rise from 7 to 14.
+% 换成更短的 \sys diagnostic 后，模型调用失败消失、verifier 加载失败降到 39，不过编译失败从 7 升到 14。
+\sys gives even a small model enough verifier-facing information to attempt more meaningful repairs, while ordinary code-generation errors remain.
+% \sys 让即便小模型也拿到足够的 verifier 向信息去尝试更有意义的修复，而普通代码生成错误依然存在。
+
+\input{tables/sec-5-failure-stage}
+
+Overall, the quantitative results match the two case studies.
+% 总体上，定量结果和两个 case study 一致。
+The diagnostic helps most at the stages where a repair must restore verifier-visible facts, loading through the verifier and preserving the program's source semantics.
+% diagnostic 在"修复必须恢复 verifier 可见事实"的阶段帮助最大：过 verifier 加载、以及保住程序的源码语义。
+These stages are exactly where \sys localizes the lost proof, so the model receives what a repair must restore.
+% 这些阶段正是 \sys 定位丢失 proof 的地方，所以模型拿到的正是修复需要恢复的东西。
