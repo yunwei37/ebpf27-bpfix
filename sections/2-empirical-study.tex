@@ -6,7 +6,7 @@ A rejection confronts the developer with a low-level log, and this section studi
 We describe how a developer reads a rejection (\S\ref{sec:study:verifier}), assemble \empiricalset, a dataset of real rejections (\S\ref{sec:study:corpus}), characterize the rejections in it (\S\ref{sec:study:bugs}), and measure the log's localization gap (\S\ref{sec:study:gap}).
 % 我们讲开发者怎么读一个 rejection（\S\ref{sec:study:verifier}）、构建真实 rejection 数据集 \empiricalset（\S\ref{sec:study:corpus}）、刻画其中的 rejection（\S\ref{sec:study:bugs}），并度量这份 log 的定位 gap（\S\ref{sec:study:gap}）。
 
-\subsection{Reading a Rejection from the Verifier Log}
+\subsection{Background: The Verifier Rejection}
 \label{sec:study:verifier}
 
 Before the kernel runs an eBPF program, the verifier must prove the program safe.
@@ -100,13 +100,13 @@ The most frequent alone covers nine root causes across 28 rejections (Table~\ref
 
 Because one error matches many root causes, the error alone cannot identify which proof the program lost, or where, the two facts a repair needs.
 % 因为一行错对应许多 root cause，单凭这行错无法判断程序丢失的是哪条 proof、又是在哪丢的，而这正是修复需要的两件事。
+The trace, however, holds more than the terminal error.
+% 但 trace 保留的不止是 terminal error 这一行。
+Under \texttt{log\_level=2} the verifier prints its abstract state after every instruction, so the lost proof survives in the printed states, and \S\ref{sec:design} reconstructs the proof from those states to localize the loss.
+% 在 \texttt{log\_level=2} 下，verifier 在每条指令后打印它的抽象状态，于是丢失的 proof 留在这些打印状态里，而第 3 节就从这些状态重建该 proof、定位丢失点。
+
 
 \begin{tcolorbox}[colback=blue!5!white,colframe=gray!75!black,left=1mm, right=1mm, top=0.5mm, bottom=0.5mm, arc=1mm]
 \textbf{Takeaway \#2:} The terminal error is too coarse to guide repair: 47\% of rejections return \texttt{EINVAL}, and one error string maps to as many as nine root causes.
 % \textbf{要点 \#2：}terminal error 太粗，无法指导修复：47\% 的 rejection 返回 \texttt{EINVAL}，一个 error 字符串最多对应 9 种 root cause。
 \end{tcolorbox}
-
-The trace, however, holds more than the terminal error.
-% 但 trace 保留的不止是 terminal error 这一行。
-Under \texttt{log\_level=2} the verifier prints its abstract state after every instruction, so the lost proof survives in the printed states, and \S\ref{sec:design} reconstructs the proof from those states to localize the loss.
-% 在 \texttt{log\_level=2} 下，verifier 在每条指令后打印它的抽象状态，于是丢失的 proof 留在这些打印状态里，而第 3 节就从这些状态重建该 proof、定位丢失点。
