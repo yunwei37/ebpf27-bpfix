@@ -9,9 +9,8 @@ The first shows how the diagnostic recovers the repair information the terminal 
 \subsection{Recovering the Missing Repair Information}
 \label{sec:eval-diagnostic-completeness}
 
-The verifier's terminal error names the operation where verification stopped, but a repair needs more: which proof the program failed to keep, and where it lost that proof.
-% verifier 的 terminal message 点出 verification 停下的那个 operation，但修复需要更多：程序没能保住哪条 proof、又在哪丢的。
-We examine one rejection from the aya project.
+We examine one rejection from the aya project to show how \sys recovers the repair information the terminal error omits.
+% 我们细看 aya 项目里的一个 rejection，展示 \sys 如何恢复 terminal error 省略的修复信息。
 % 我们细看 aya 项目里的一个 rejection。
 
 As shown in Figure~\ref{fig:diag-example}, the program treats the map object \texttt{\&globals} as a map-value pointer, casting its address to \texttt{\_\_u64 *} and reading and writing through the result.
