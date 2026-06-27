@@ -7,7 +7,7 @@ To load a program, a developer writes it in C or Rust, compiles it to eBPF bytec
 % 开发者用 C 或 Rust 写程序、编译成 BPF 字节码、提交给静态 verifier，verifier 沿每条执行路径跟踪抽象值来证明程序安全。
 
 % 段2: 问题 + 例子
-However, the verifier reports where it stopped, not where the proof was lost, making repair challenging.
+However, the unclear verifier rejection makes repair challenging.
 % 然而，verifier 报告的是它停下的位置，而非 proof 丢失的位置，这使得修复困难。
 Figure~\ref{fig:overview} illustrates this diagnostic gap: a packet pointer that the program bounds-checks is rejected at a later load with \texttt{R5 invalid mem access `scalar'}, on a line the developer has no reason to suspect.
 % 图~\ref{fig:overview} 展示了这个 diagnostic gap：程序已经 bounds-check 过的 packet pointer 仍在后续 load 处被拒，而出错的行开发者根本想不到有问题。
@@ -27,13 +27,13 @@ The terminal error provides little help: 47\% of rejections return \texttt{EINVA
 % 段4: 现有工具不足
 Existing tools do not close this gap.
 % 现有工具无法弥合这个 gap。
-PrettyVerifier~\cite{rizza2025design} and the BPF Verifier Visualizer~\cite{bpfvv} help developers read the error with regular expressions, but neither locates where the proof was lost.
+PrettyVerifier~\cite{rizza2025design} and the BPF Verifier Visualizer~\cite{bpfvv} help developers read the error with regular expressions or visualizations, but neither locates where the proof was lost.
 % PrettyVerifier 和 BPF Verifier Visualizer 帮助开发者阅读 error，但都不能定位 proof 在哪丢失。
-Localizers in other domains like Rust walk a structure the checker builds, such as an AST or typing constraints~\cite{pavlinovic2014finding, zhang2014toward}, but the eBPF verifier exposes no such artifact.
+Error Explainers in other domains like Rust walk a structure the checker builds, such as an AST or typing constraints~\cite{pavlinovic2014finding, zhang2014toward}, but the eBPF verifier exposes no such artifact.
 % 其他领域的定位器走 checker 构建的结构（如 AST 或 typing constraints），而 eBPF verifier 不暴露这类制品。
 
 % 段5: \sys
-We introduce \sys, which reconstructs where the required proof was established and where it was lost from the verifier log and print a Rust-like diagnostic (Figure~\ref{fig:overview}).
+To improve the diagnostic process, we introduce \sys, which reconstructs where the required proof was established and where it was lost from the verifier log, and prints a Rust-like diagnostic (Figure~\ref{fig:overview}).
 % 我们提出 \sys，它从 verifier log 重建所需 proof 在哪建立、在哪丢失，并打印类似 Rust 的诊断信息（图~\ref{fig:overview}）。
 
 % 段6: LLM benchmark 结果
@@ -41,7 +41,7 @@ To measure the ability of LLMs to fix verifier rejections, we construct \bench, 
 % 为衡量 LLM 修复 verifier rejection 的能力，我们构建 \bench：一个 75 修复任务的 benchmark。
 With the raw verifier log, current LLMs achieve only 0--37\% one-shot repair across three models ranging from 3B to 27B parameters, showing that verifier rejections remain difficult even for capable models.
 % 用 raw verifier log 时，三个规模从 3B 到 27B 的模型 one-shot 修复率仅为 0--37\%，说明即使对能力较强的模型，verifier rejection 仍然困难。
-Replacing the log with the \sys localization improves repair by 11--21pp, with the gain largest at the stages where a repair must restore the verifier-visible proof.
+To see whether better diagnostics help automated repair, we replace the log with the \sys localization, which improves repair by 11--21pp, with the gain largest at the stages where a repair must restore the verifier-visible proof.
 % 换成 \sys 的定位后提升 11--21 个百分点，提升最大的阶段正是修复需要恢复 verifier 可见 proof 的地方。
 The result suggests that locating where the proof was lost, rather than only where verification stopped, is key to guiding repair.
 % 这表明定位 proof 在哪丢失（而非仅仅 verification 在哪停下）是引导修复的关键。
