@@ -3,14 +3,14 @@
 
 This section evaluates the \sys diagnostic with two case studies and a repair measurement.
 % 本节用两个 case study 和一个修复测量来评估 \sys 的 diagnostic。
-We first run two case studies on \bench: one rejection where the diagnostic recovers the repair information the terminal message omits, and a pair where it separates the responsible layer behind a shared message.
+We first run two case studies on \bench: one rejection where the diagnostic recovers the repair information the terminal error omits, and a pair where it separates the responsible layer behind a shared terminal error.
 % 我们先在 \bench 上做两个 case study：一个 rejection 展示 diagnostic 从 terminal message 里恢复出被省略的修复信息，一对 rejection 展示它如何区分一条共享 message 背后的责任 layer。
 We then measure on \testset whether replacing the raw verifier log with the \sys diagnostic raises downstream repair, counting only the fixes that an oracle independent of \sys accepts.
 % 然后我们在 \testset 上测量：把 raw verifier log 换成 \sys diagnostic 是否提升下游修复，只数那些被独立于 \sys 的 oracle 接受的 fix。
 
 \noindent\textbf{Setup.} The two case studies draw on \bench, the 235 reproduced rejections of \S\ref{sec:study:corpus}.
 % 两个 case study 用的是 \bench，也就是 \S\ref{sec:study:corpus} 里那 235 个复现 rejection。
-The repair measurement uses \testset, 75 source-level repair tasks, 40 built around verifier proof obligations and 35 minimized from open-source projects such as Cilium~\cite{cilium}, xdp-tools~\cite{xdptools}, and bpftime~\cite{zheng2025extending}.
+The repair measurement uses \testset, 75 source-level repair tasks, 40 built around a required verifier proof and 35 minimized from open-source projects such as Cilium~\cite{cilium}, xdp-tools~\cite{xdptools}, and bpftime~\cite{zheng2025extending}.
 % 修复测量用 \testset：75 个源码级修复任务，其中 40 个围绕 verifier proof obligation 构造、35 个从 Cilium、xdp-tools、bpftime 这类开源项目最小化而来。
 Each task ships the buggy program with an executable oracle independent of \sys, which accepts a fix only if it loads through the kernel verifier and passes the case's functional and source-semantics tests.
 % 每个任务都带出错程序和一个独立于 \sys 的可执行 oracle，它只在修复通过内核 verifier 加载、并通过该 case 的功能和源码语义测试时才接受。
@@ -18,7 +18,7 @@ Each task ships the buggy program with an executable oracle independent of \sys,
 \subsection{Recovering the Missing Repair Information}
 \label{sec:eval-diagnostic-completeness}
 
-The verifier's terminal message names the operation where verification stopped, but a repair needs more: which proof the program failed to keep, and where it lost that proof.
+The verifier's terminal error names the operation where verification stopped, but a repair needs more: which proof the program failed to keep, and where it lost that proof.
 % verifier 的 terminal message 点出 verification 停下的那个 operation，但修复需要更多：程序没能保住哪条 proof、又在哪丢的。
 We examine one rejection from the aya project.
 % 我们细看 aya 项目里的一个 rejection。
@@ -48,7 +48,7 @@ The terminal line gives only the rejected operation, while the diagnostic recove
 
 A second diagnostic gap is that one terminal verifier message can call for repairs in different layers.
 % 第二个 diagnostic gap 是：同一条 terminal verifier message 可能对应不同 layer 的修复。
-\sys reports the responsible layer as a best-effort attribution, so we inspect whether it separates two rejections that share one message but belong to different layers.
+\sys reports the responsible layer as a best-effort attribution, labeling a rejection \texttt{source\_bug} for the source layer of \S\ref{sec:study} or \texttt{lowering\_artifact} for the compiler layer. We inspect whether \sys separates two rejections that share one terminal error but belong to different layers.
 % \sys 把责任 layer 作为 best-effort 归因报告，所以我们检视它能否区分两个共享同一条 message、却属于不同 layer 的 rejection。
 
 Figure~\ref{fig:layer-attr} shows two rejections that both end with \texttt{invalid mem access `scalar'}.
@@ -68,7 +68,7 @@ The upstream fix steers the compiler and leaves the source logic unchanged, so t
 % 上游的修复是去引导编译器、不动源码逻辑，所以这个 layer 标签独立于 \sys 也成立。
 \sys reports the case as \texttt{lowering\_artifact}.
 % \sys 把这个 case 报为 \texttt{lowering\_artifact}。
-On these two rejections, \sys reports a different layer for each, separating a source bug from a lowering artifact behind one terminal message.
+On these two rejections, \sys reports a different layer for each, separating a source bug from a lowering artifact behind one terminal error.
 % 在这两个 rejection 上，\sys 各报了不同的 layer，把一条 terminal message 背后的 source bug 和 lowering artifact 区分开。
 
 \input{figures/sec-5-layer-attr}
@@ -125,7 +125,7 @@ With the shorter \sys diagnostic, model-call failures disappear and verifier-loa
 
 Overall, the quantitative results match the two case studies.
 % 总体上，定量结果和两个 case study 一致。
-The diagnostic helps most at the stages where a repair must restore verifier-visible facts, loading through the verifier and preserving the program's source semantics.
+The diagnostic helps most at the stages where a repair must restore the verifier-visible proof, loading through the verifier and preserving the program's source semantics.
 % diagnostic 在"修复必须恢复 verifier 可见事实"的阶段帮助最大：过 verifier 加载、以及保住程序的源码语义。
 These stages are exactly where \sys localizes the lost proof, so the model receives what a repair must restore.
 % 这些阶段正是 \sys 定位丢失 proof 的地方，所以模型拿到的正是修复需要恢复的东西。
