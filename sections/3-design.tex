@@ -18,19 +18,14 @@ Figure~\ref{fig:design-overview} summarizes the three-stage workflow: log analys
 \subsection{Architecture and Data Flow}
 \label{sec:design-architecture}
 
-\sys is a log-first pipeline whose only required input is an existing verifier log.
-% \sys 是一个 log-first 流水线，唯一必需的输入是现有的 verifier log。
-Optional source or object metadata improves instruction-to-source correlation but is not needed for log-level diagnosis.
-% 可选的源码或 object 元数据可改善指令到源码的对应，但 log 级诊断不需要它们。
-
-The Log Analysis stage isolates the final rejection and extracts the terminal error, the per-instruction abstract state and branch information, instruction identifiers, and available source annotations into a normalized evidence stream.
-% Log Analysis 阶段隔离出最终 rejection，把 terminal error、逐指令的抽象状态和分支信息、指令标识符、以及可用的源码注解抽取到一条归一化的 evidence 流里。
-The Proof Reconstruction stage maps the terminal error to a proof family (such as pointer provenance, packet bounds, scalar range, non-nullness, stack initialization, or reference lifetime), identifies the required proof at the rejected operation, and tracks evidence for that proof.
-% Proof Reconstruction 阶段把 terminal error 映到一个 proof 家族（如指针 provenance、packet bounds、scalar range、non-nullness、栈初始化或引用生命周期），识别被拒操作处的 required proof，并追踪该 proof 的 evidence。
-Its evidence record contains the required proof, rejection location, supporting evidence, observed establishment or loss events, and a loss point when the log exposes one.
-% 它的 evidence 记录包含 required proof、rejection location、supporting evidence、观察到的 establishment 或 loss 事件，以及 log 暴露时的 loss point。
-The Diagnostic Generation stage selects primary and related spans, records their localization precision, derives a lifecycle-specific next action, and may attach a failure class and confidence when supported by ordered evidence rules.
-% Diagnostic Generation 阶段选出 primary 和 related span，记录它们的定位精度，导出针对生命周期的 next action，并在有序 evidence 规则支持时附加 failure class 和置信度。
+\sys is a pipeline whose only required input is an existing verifier log; optional source or object metadata improves instruction-to-source mapping.
+% \sys 是一个流水线，唯一必需的输入是现有的 verifier log；可选的源码或 object 元数据可改善指令到源码的映射。
+The Log Analysis stage extracts the terminal error and the per-instruction abstract states into a normalized evidence stream.
+% Log Analysis 阶段把 terminal error 和逐指令的抽象状态抽取到一条归一化的 evidence 流里。
+The Proof Reconstruction stage maps the terminal error to a proof family (such as pointer provenance, packet bounds, or scalar range), identifies the required proof, and tracks evidence for that proof.
+% Proof Reconstruction 阶段把 terminal error 映到一个 proof 家族（如指针 provenance、packet bounds 或 scalar range），识别 required proof，并追踪该 proof 的 evidence。
+The Diagnostic Generation stage selects spans and derives guidance for re-establishing the proof.
+% Diagnostic Generation 阶段选出 span，导出重建 proof 的指引。
 
 The result is a Rust-style plain-text diagnostic with a stable error identifier, the required proof, relevant spans and evidence, a loss point when observable, and \texttt{help:} guidance.
 % 结果是一条 Rust 风格的纯文本诊断，带稳定的 error 标识符、required proof、相关 span 和 evidence、可观测时的 loss point、以及 \texttt{help:} 指引。
@@ -42,8 +37,8 @@ The result is a Rust-style plain-text diagnostic with a stable error identifier,
 % \sys 首先识别 verifier 需要的是哪条 proof。
 The terminal error identifies the rejected operation and immediate symptom, while nearby abstract state supplies parameters such as the affected register, access offset and size, scalar range, pointer type, or reference identifier.
 % terminal error 标出被拒操作和直接症状，附近的抽象状态提供参数，如受影响的寄存器、访问 offset 和大小、scalar range、指针类型或引用标识符。
-Together they instantiate the required proof at the rejection location, without assuming the rejection location is the eventual repair location.
-% 二者共同在 rejection location 实例化 required proof，但不假定 rejection location 就是最终的 repair location。
+Together they identify the required proof at the rejection location.
+% 二者共同在 rejection location 识别出 required proof。
 For example, in Figure~\ref{fig:overview}, \texttt{R5 invalid mem access `scalar'} maps to a pointer-provenance proof.
 % 例如在图~\ref{fig:overview} 中，\texttt{R5 invalid mem access `scalar'} 映到一个指针 provenance proof。
 From the rejected load and nearby state, \sys infers that \texttt{R5} must still carry verifier-recognized packet-pointer provenance when the rejected load reads it.
@@ -66,12 +61,10 @@ Diagnostic synthesis adapts its guidance to the reconstructed proof lifecycle.
 % Diagnostic synthesis 根据重建的 proof 生命周期调整指引。
 \sys localizes the evidence needed for repair: the rejected operation, the required proof at that operation, the loss point when the log exposes one, and the span and next action that guide the developer in re-establishing the proof.
 % \sys 定位修复所需的 evidence：被拒操作、该操作处的 required proof、log 暴露时的 loss point、以及指引开发者重建 proof 的 span 和 next action。
-If no establishment event is observed, \sys recommends introducing or re-deriving the missing proof, for example through a same-path bounds check, null check, initialization, or reference acquisition.
-% 若未观测到 establishment event，\sys 建议引入或重新推导缺失的 proof，例如通过同路径的 bounds check、null check、初始化或引用获取。
-If the proof is visible and later lost, it recommends preserving or re-deriving it near the rejected use.
-% 若 proof 可见但后来丢失，则建议在被拒使用点附近保持或重新推导它。
-If intermediate evidence is insufficient, it recommends conservative local re-establishment without claiming an unsupported witness.
-% 若中间 evidence 不足，则建议保守地本地重建，不声称无支持的 witness。
+When the proof was never established, \sys recommends introducing it, for example through a bounds check, null check, or reference acquisition.
+% 当 proof 从未建立时，\sys 建议引入它，例如通过 bounds check、null check 或引用获取。
+When the proof is visible and later lost, it recommends preserving or re-deriving it near the rejected use.
+% 当 proof 可见但后来丢失时，建议在被拒使用点附近保持或重新推导它。
 
 The evidence record also determines localization.
 % evidence 记录也决定定位。
