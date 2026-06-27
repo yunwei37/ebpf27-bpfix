@@ -39,8 +39,10 @@ We introduce \sys, which reconstructs where the required proof was established a
 % 段6: LLM benchmark 结果
 To evaluate whether this localization helps repair, we construct \bench, a benchmark of 75 repair tasks with independent oracles.
 % 为评估这种定位是否有助于修复，我们构建 \bench：一个带独立 oracle 的 75 修复任务 benchmark。
-Current LLMs achieve 0--37\% one-shot repair with the raw verifier log; replacing the log with the \sys localization improves repair by 11--21pp.
-% 当前 LLM 用 raw verifier log 的 one-shot 修复为 0--37\%；换成 \sys 的定位后提升 11--21 个百分点。
+Current LLMs achieve 0--37\% one-shot repair with the raw verifier log; replacing the log with the \sys localization improves repair by 11--21pp across three models ranging from 3B to 27B parameters.
+% 当前 LLM 用 raw verifier log 的 one-shot 修复为 0--37\%；换成 \sys 的定位后，三个规模从 3B 到 27B 的模型都提升 11--21 个百分点。
+The gain is largest at the stages where a repair must restore the verifier-visible proof, showing that the diagnostic gives the model what a correct fix needs.
+% 提升最大的阶段正是修复需要恢复 verifier 可见 proof 的地方，说明 diagnostic 给模型的正是正确修复需要的东西。
 
 % 段7: 贡献
 This paper makes the following contributions:
