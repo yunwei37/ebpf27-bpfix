@@ -33,10 +33,9 @@ Localizers in other domains like Rust walk a structure the checker builds, such 
 % 其他领域的定位器走 checker 构建的结构（如 AST 或 typing constraints），而 eBPF verifier 不暴露这类制品。
 
 % 段5: \sys
-We introduce \sys, which reconstructs where the required proof was established and where it was lost from the verifier log.
-% 我们提出 \sys，它通过从 verifier log 重建所需 proof 在哪建立、在哪丢失来弥合这一 gap。
-and report a proof-break witness that localizes the loss (Figure~\ref{fig:overview}).
-% 在 \texttt{log\_level=2} 下，verifier 在每条指令后打印抽象状态；\sys 分析这些状态，报告一个定位丢失点的 proof-break witness（图~\ref{fig:overview}）。
+We introduce \sys, which reconstructs where the required proof was established and where it was lost from the verifier log, and reports a proof-break witness that localizes the loss (Figure~\ref{fig:overview}).
+% 我们提出 \sys，它从 verifier log 重建所需 proof 在哪建立、在哪丢失，并报告一个定位丢失点的 proof-break witness（图~\ref{fig:overview}）。
+
 % 段6: LLM benchmark 结果
 To evaluate whether this localization helps repair, we construct \bench, a benchmark of 75 repair tasks with independent oracles.
 % 为评估这种定位是否有助于修复，我们构建 \bench：一个带独立 oracle 的 75 修复任务 benchmark。
