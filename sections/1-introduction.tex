@@ -1,12 +1,10 @@
 \section{Introduction}
 \label{sec:introduction}
 
-eBPF lets developers run custom programs inside the Linux kernel on the performance-critical paths of networking, security, and observability~\cite{gbadamosi2024ebpf, cilium}.
-% eBPF 让开发者在内核里、网络/安全/可观测性的性能关键路径上运行自定义程序。
-A developer writes an eBPF program in C or Rust, compiles it to BPF bytecode with Clang and LLVM, and loads the bytecode into the running kernel.
-% 开发者用 C 或 Rust 写 eBPF 程序，用 Clang/LLVM 编译成 BPF 字节码，再加载进运行中的内核。
-Before the kernel runs the program, a static verifier must prove the program safe, exploring every path and tracking an abstract value for each register and stack slot~\cite{gershuni2019simple, linuxkernel-bpf-verifier}.
-% 在内核运行该程序前，静态 verifier 必须证明它安全：遍历每条路径，为每个寄存器和栈槽跟踪一个抽象值。
+eBPF lets developers run custom programs inside the Linux kernel for networking, security, and observability~\cite{gbadamosi2024ebpf, cilium}.
+% eBPF 让开发者在内核里、网络/安全/可观测性的关键路径上运行自定义程序。
+To load a program, a developer writes it in C or Rust, compiles it to eBPF bytecode, and submits it to a verifier. The verifier proves the program safe by tracking abstract values along every execution path~\cite{gershuni2019simple, linuxkernel-bpf-verifier}.
+% 开发者用 C 或 Rust 写程序、编译成 BPF 字节码、提交给静态 verifier，verifier 沿每条执行路径跟踪抽象值来证明程序安全。
 
 When the verifier rejects a program, the terminal error it returns identifies the rejection location, the operation where verification stopped, which can lie far from where the program lost the required proof.
 % verifier 拒绝程序时，它返回的 terminal error 指出 rejection location，也就是 verification 停下来的那个 operation，而它可能离程序丢失所需 proof 的地方很远。
