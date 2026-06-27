@@ -9,8 +9,8 @@ The goal of \sys is to answer two questions the terminal error leaves open: whic
 \sys reconstructs the proof lifecycle from the existing verifier log by parsing the per-instruction abstract states and tracking when evidence for the required proof appears, persists, and is lost.
 % \sys 通过解析这些 logged state、追踪 required proof 的 evidence 何时出现、何时持续、何时丢失，来重建这个生命周期。
 
-We distinguish three locations: the \emph{rejection location}, where the verifier stopped; an observed \emph{loss point}, after which logged evidence no longer supports the proof; and the developer-chosen \emph{repair location}. A loss point narrows the diagnosis but is neither a minimal causal instruction set nor necessarily the repair location.
-% 我们区分三个位置：rejection location（verifier 停下的地方）、observed loss point（之后 logged evidence 不再支持 proof）、以及开发者选择的 repair location。loss point 缩小了诊断范围，但既不是最小因果指令集，也不一定是 repair location。
+We distinguish three locations: the \emph{rejection location}, where the verifier stopped; an observed \emph{loss point}, after which logged evidence no longer supports the proof; and the developer-chosen \emph{repair location}.
+% 我们区分三个位置：rejection location（verifier 停下的地方）、observed loss point（之后 logged evidence 不再支持 proof）、以及开发者选择的 repair location。
 
 Figure~\ref{fig:design-overview} summarizes the three-stage workflow: log analysis normalizes evidence around the rejection, proof reconstruction identifies and tracks the required proof, and diagnostic generation turns the resulting evidence into guidance the developer can act on.
 % 图~\ref{fig:design-overview} 总结了三阶段工作流：log analysis 归一化 rejection 周围的 evidence，proof reconstruction 识别并追踪 required proof，diagnostic generation 把结果 evidence 转为可操作的指引。
@@ -51,10 +51,6 @@ From the rejected load and nearby state, \sys infers that \texttt{R5} must still
 
 Proof-family-specific extraction records three event types: an \emph{establishment event}, where logged evidence explicitly supports the proof; a \emph{loss event}, where a later logged state is incompatible with it; and the \emph{rejection event}, where the verifier requires but cannot establish it.
 % 针对 proof 家族的抽取记录三类事件：establishment event（logged evidence 明确支持该 proof）、loss event（后续 logged state 与之不兼容）、rejection event（verifier 需要但无法建立它）。
-A missing snapshot or unprinted state is not itself proof loss.
-% 缺失的快照或未打印的状态本身不构成 proof loss。
-Each event retains its program location, relevant state, evidence source, and recoverable source span.
-% 每个事件保留其程序位置、相关状态、evidence 来源和可恢复的源码 span。
 When both a supporting and a later incompatible observation exist, their transition becomes the loss point; otherwise, \sys reports only the required proof and rejection location.
 % 当同时存在支持性和后续不兼容的观测时，它们之间的转换成为 loss point；否则 \sys 仅报告 required proof 和 rejection location。
 
@@ -62,8 +58,6 @@ In the running example, an earlier state represents \texttt{R5} as \texttt{pkt(o
 % 在运行示例中，较早的状态把 \texttt{R5} 表示为 \texttt{pkt(off=34,r=42)}，而指令 37 前的较晚状态把它表示为 scalar 值 \texttt{40}。
 The final load dereferences \texttt{R5}, so \sys reports the observed pointer-to-scalar transition as the loss point and instruction~37 as the rejection location.
 % 最终的 load 解引用 \texttt{R5}，所以 \sys 把观测到的指针到 scalar 的转换报为 loss point，指令 37 报为 rejection location。
-This loss point marks only where provenance ceased to be visible in the printed evidence; it does not identify a unique causal instruction, account for unprinted paths, or determine the repair location.
-% 这个 loss point 仅标记 provenance 在打印 evidence 中不再可见的位置；它不识别唯一的因果指令、不考虑未打印的路径、也不决定 repair location。
 
 \subsection{Evidence-Aware Diagnostic Synthesis}
 \label{sec:design-synthesis}
@@ -83,17 +77,5 @@ The evidence record also determines localization.
 % evidence 记录也决定定位。
 \sys selects the most informative location as the primary span, reports relevant rejection, establishment, or loss locations as related spans, and states whether each is backed by source mapping, a BPF instruction identifier, or only a log position.
 % \sys 选最有信息量的位置作 primary span，把相关的 rejection、establishment 或 loss 位置报为 related span，并说明各个 span 是由源码映射、BPF 指令标识符还是仅 log 位置支持。
-
-\sys may also attach a failure class and confidence when ordered evidence rules support one.
-% \sys 也可能在有序 evidence 规则支持时附加 failure class 和置信度。
-These labels summarize the diagnostic but do not drive proof reconstruction or span selection.
-% 这些标签总结诊断，但不驱动 proof reconstruction 或 span 选择。
-In particular, an observed proof transition alone does not determine whether the repair belongs in source, compiler lowering, loader relocation, or the verifier.
-% 尤其是，单凭观测到的 proof 转换无法确定修复属于源码、编译器 lowering、loader relocation 还是 verifier。
-When the evidence is insufficient, \sys keeps the evidence-backed diagnostic without forcing an attribution.
-% 当 evidence 不足时，\sys 保留有 evidence 支持的诊断，不强行归因。
-
 Developers use the resulting guidance to choose and validate a repair through the normal compile-and-load workflow.
 % 开发者用产出的指引来选择并验证修复，走正常的编译加载流程。
-\sys neither rewrites the program nor treats the loss point as the repair location.
-% \sys 既不重写程序，也不把 loss point 当作 repair location。
