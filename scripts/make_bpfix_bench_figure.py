@@ -4,7 +4,7 @@ from pathlib import Path
 import matplotlib.pyplot as plt
 
 
-OUTPUT = Path(__file__).resolve().parents[1] / "figures" / "sec-5-bpfix-test.pdf"
+OUTPUT = Path(__file__).resolve().parents[1] / "figures" / "sec-5-bpfix-bench.pdf"
 
 MODELS = [
     {

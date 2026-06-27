@@ -6,56 +6,54 @@ eBPF lets developers run custom programs inside the Linux kernel for networking,
 To load a program, a developer writes it in C or Rust, compiles it to eBPF bytecode, and submits it to a verifier. The verifier proves the program safe by tracking abstract values along every execution path~\cite{gershuni2019simple, linuxkernel-bpf-verifier}.
 % 开发者用 C 或 Rust 写程序、编译成 BPF 字节码、提交给静态 verifier，verifier 沿每条执行路径跟踪抽象值来证明程序安全。
 
-When the verifier rejects a program, the terminal error it returns identifies the rejection location, the operation where verification stopped, which can lie far from where the program lost the required proof.
-% verifier 拒绝程序时，它返回的 terminal error 指出 rejection location，也就是 verification 停下来的那个 operation，而它可能离程序丢失所需 proof 的地方很远。
-On rejection the verifier returns a log of bytecode and register states ending in this terminal error~\cite{linuxkernel-bpf-verifier}.
-% 被拒时，verifier 返回一串字节码和寄存器状态的 log，末尾就是这行 terminal error。
-In Figure~\ref{fig:overview}, a packet pointer that the program bounds-checks is rejected at a later load with \texttt{R5 invalid mem access `scalar'}, on a line the developer has no reason to suspect.
-% 图 1 里，一个程序已经 bounds-check 过的 packet pointer，仍在后续一次 load 处被 \texttt{R5 invalid mem access 'scalar'} 拒绝，而出错的行开发者根本想不到有问题。
-The distance between where the verifier reports the rejection and where the program lost the proof is the diagnostic gap.
-% verifier 报告 rejection 的地方，和程序真正丢失 proof 的地方，二者之间的距离，就是 diagnostic gap。
-Unable to close this gap from the terminal error alone, the developer resorts to repeated trial and error~\cite{deokar2024empirical}.
-% 单凭 terminal error 没法弥合这个 gap，开发者只能反复试错。
+% 段2: 问题 + 例子
+However, the verifier reports where it stopped, not where the proof was lost, making repair challenging.
+% 然而，verifier 报告的是它停下的位置，而非 proof 丢失的位置，这使得修复困难。
+Figure~\ref{fig:overview} illustrates this diagnostic gap: a packet pointer that the program bounds-checks is rejected at a later load with \texttt{R5 invalid mem access `scalar'}, on a line the developer has no reason to suspect.
+% 图~\ref{fig:overview} 展示了这个 diagnostic gap：程序已经 bounds-check 过的 packet pointer 仍在后续 load 处被拒，而出错的行开发者根本想不到有问题。
+Without a way to locate where the proof was lost, developers must rely on repeated trial and error~\cite{deokar2024empirical}.
+% 无法定位 proof 在哪丢失，开发者只能依赖反复试错。
 
-Existing eBPF tools read the terminal error to recover the failing location, but none localizes where the required proof was lost~\cite{rizza2025design, bpfvv}.
-% 现有 eBPF 工具靠读 terminal error 来恢复失败位置，但没有一个能定位 required proof 是在哪丢的。
-PrettyVerifier maps the terminal error to a C source line and rewords it using the source and debug information~\cite{rizza2025design}.
-% PrettyVerifier 把 terminal error 映到一个 C 源码行，并结合源码与调试信息把它重述。
-The BPF Verifier Visualizer accumulates the verifier's per-instruction register states~\cite{bpfvv}.
-% BPF Verifier Visualizer 把 verifier 逐指令的寄存器状态累积起来。
-Even so, one terminal error comes from many root causes, and cannot show where the program lost the proof.
-% 即便如此，一行 terminal error 来自许多 root cause，看不出程序在哪丢了这条 proof。
+% 段3: Empirical study
+To quantify this gap, we conduct an empirical study of 235 rejections reproduced from Stack Overflow, GitHub issues, fix commits, and kernel selftests.
+% 为量化这一 gap，我们对来自 Stack Overflow、GitHub issue、修复 commit 和内核 selftest 的 235 个复现 rejection 进行实证研究。
+We find that 191 are program bugs spanning 12 root causes, while the other 44 reject correct source due to compiler optimizations that obscure pointer types, environment misconfiguration, or verifier limitations.
+% 我们发现 191 个是程序 bug、涵盖 12 类 root cause，另外 44 个拒绝的是正确源码，原因是编译器优化隐藏了指针类型、环境配置错误或 verifier 的限制。
+Of the 12 root causes, 10 are eBPF-specific (e.g., packet bounds, dynptr lifetime), so repair requires domain knowledge beyond general programming.
+% 12 类 root cause 中有 10 类是 eBPF 特有的（如 packet bounds、dynptr lifetime），因此修复需要超越通用编程的领域知识。
+The terminal error provides little help: 47\% of rejections return \texttt{EINVAL}, and one error string maps to as many as nine distinct root causes.
+% terminal error 帮助甚少：47\% 的 rejection 返回 \texttt{EINVAL}，一个 error 字符串最多对应 9 种不同的 root cause。
 
-Recovering the lost proof is hard because the verifier exposes no structured artifact to localize against.
-% 之所以难以恢复丢失的 proof，是因为 verifier 没有暴露任何可供定位的结构化制品。
-Localizers in other settings walk a structure the checker builds, such as a source abstract syntax tree (AST) or typing constraints, but the eBPF verifier exposes none~\cite{pavlinovic2014finding, zhang2014toward}.
-% 别的场景里，定位器会走一个 checker 本来就构建好的结构，例如源码 abstract syntax tree（AST）或类型约束，而 eBPF verifier 一个都不暴露。
-The insight behind \sys is that the discarded proof survives in the log.
-% \sys 的 insight 是：被丢弃的 proof 其实留在了 log 里。
-The verifier builds a safety proof instruction by instruction and discards it at the rejection location, but under \texttt{log\_level=2} the verifier prints its abstract state after every instruction~\cite{linuxkernel-bpf-verifier}.
-% verifier 逐指令构建一个 safety proof 并在 rejection location 处丢弃它，但在 \texttt{log\_level=2} 下它会在每条指令后打印它的抽象状态。
-From the printed state, a tool reconstructs the lifecycle of the required proof, a structure that serves localization as a source AST does elsewhere.
-% 从这些打印出的状态，工具就能重建 required proof 的生命周期，这个结构对定位的作用，正如源码 AST 之于别的定位器。
+% 段4: 现有工具不足
+Existing tools do not close this gap.
+% 现有工具无法弥合这个 gap。
+PrettyVerifier~\cite{rizza2025design} and the BPF Verifier Visualizer~\cite{bpfvv} help developers read the error with regular expressions, but neither locates where the proof was lost.
+% PrettyVerifier 和 BPF Verifier Visualizer 帮助开发者阅读 error，但都不能定位 proof 在哪丢失。
+Localizers in other domains like Rust walk a structure the checker builds, such as an AST or typing constraints~\cite{pavlinovic2014finding, zhang2014toward}, but the eBPF verifier exposes no such artifact.
+% 其他领域的定位器走 checker 构建的结构（如 AST 或 typing constraints），而 eBPF verifier 不暴露这类制品。
 
-\sys is a userspace tool that localizes a rejection by reconstructing the proof lifecycle from the rejection log alone.
-% \sys 是一个 userspace 工具，它只凭 rejection log 重建 proof 生命周期来定位 rejection。
-From the log, \sys maps the terminal error to the required proof and replays it across the printed states, recording where the proof is established, lost, and needed.
-% 从这份 log，\sys 把 terminal error 映成 required proof 并在打印出的状态上回放，记录 proof 在哪建立、在哪丢失、在哪被需要。
-Figure~\ref{fig:overview} shows the resulting diagnostic, where \sys reports the established-to-lost transition as a proof-break witness across spans mapped back to the source.
-% 图 1 给出这个诊断：\sys 把“建立到丢失”的转移点作为一个 proof-break witness，报告在若干映回源码的 span 上。
+% 段5: \sys
+Although the verifier exposes no structured artifact, under \texttt{log\_level=2} it prints its abstract state after every instruction~\cite{linuxkernel-bpf-verifier}.
+% 虽然 verifier 不暴露结构化制品，但在 \texttt{log\_level=2} 下它在每条指令后打印抽象状态。
+\sys analyzes this log to reconstruct where the required proof was established and where it was lost, reporting a proof-break witness that localizes the loss (Figure~\ref{fig:overview}).
+% \sys 分析这份 log，重建所需 proof 在哪建立、在哪丢失，报告一个定位丢失点的 proof-break witness（图~\ref{fig:overview}）。
 
-Replacing the raw verifier log with the \sys localization raises one-shot repair across the three downstream models we test, from 22 to 38 of 75 on the strongest, with each fix judged by an oracle independent of \sys.
-% 把 raw verifier log 换成 \sys 的定位结果，在我们测试的三个下游模型上都提升了 one-shot 修复，最强模型从 75 例中的 22 提到 38，每个 fix 由一个独立于 \sys 的 oracle 判定。
+% 段6: LLM benchmark 结果
+To evaluate whether this localization helps repair, we construct \bench, a benchmark of 75 repair tasks with independent oracles.
+% 为评估这种定位是否有助于修复，我们构建 \bench：一个带独立 oracle 的 75 修复任务 benchmark。
+Current LLMs achieve 0--37\% one-shot repair with the raw verifier log; replacing the log with the \sys localization improves repair by 11--21pp.
+% 当前 LLM 用 raw verifier log 的 one-shot 修复为 0--37\%；换成 \sys 的定位后提升 11--21 个百分点。
 
+% 段7: 贡献
 This paper makes the following contributions:
 % 本文的贡献如下：
 \begin{itemize}
-\item An empirical study on \bench showing the terminal error reports where verification stopped, leaving the proof loss to find~(\S\ref{sec:study}).
-% 一项在 \bench 上的实证研究：表明 terminal error 报告的是 verification 停下来的位置，把 proof 的丢失点留给开发者去找（见第 2 节）。
-\item \sys, a log-only, deterministic technique that localizes a rejection by reconstructing the required proof's lifecycle and reporting a proof-break witness~(\S\ref{sec:design}).
-% \sys：一种只读 log、deterministic 的技术，靠重建 required proof 的生命周期、报告 proof-break witness 来定位 rejection（见第 3 节）。
-\item \bench, 235 reproduced rejections with ground-truth fixes, and \testset, 75 repair tasks with \sys-independent oracles~(\S\ref{sec:study}, \S\ref{sec:evaluation}).
-% \bench（235 个复现 rejection、带 ground-truth fix）与 \testset（75 个修复任务、带独立 oracle）两个数据集（见第 2、4 节）。
+\item An empirical study of 235 reproduced rejections showing the terminal error reports where verification stopped, leaving the developer to find where the proof was lost~(\S\ref{sec:study}).
+% 一项对 235 个复现 rejection 的实证研究，表明 terminal error 报告的是 verification 停下的位置，开发者需自己找 proof 在哪丢的（见第 2 节）。
+\item \sys, a technique that reconstructs the required proof's lifecycle from the verifier log and reports a proof-break witness~(\S\ref{sec:design}).
+% \sys：一种从 verifier log 重建 required proof 生命周期、报告 proof-break witness 的技术（见第 3 节）。
+\item \bench, a benchmark of 75 repair tasks with independent oracles for evaluating LLM-based verifier repair~(\S\ref{sec:evaluation}).
+% \bench：一个带独立 oracle 的 75 修复任务 benchmark，用于评估基于 LLM 的 verifier 修复（见第 4 节）。
 \end{itemize}
 
 \input{figures/sec-1-overview}

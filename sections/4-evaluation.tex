@@ -3,15 +3,15 @@
 
 This section evaluates the \sys diagnostic with two case studies and a repair measurement.
 % 本节用两个 case study 和一个修复测量来评估 \sys 的 diagnostic。
-We first run two case studies on \bench: one rejection where the diagnostic recovers the repair information the terminal error omits, and a pair where it separates the responsible layer behind a shared terminal error.
-% 我们先在 \bench 上做两个 case study：一个 rejection 展示 diagnostic 从 terminal message 里恢复出被省略的修复信息，一对 rejection 展示它如何区分一条共享 message 背后的责任 layer。
-We then measure on \testset whether replacing the raw verifier log with the \sys diagnostic raises downstream repair, counting only the fixes that an oracle independent of \sys accepts.
-% 然后我们在 \testset 上测量：把 raw verifier log 换成 \sys diagnostic 是否提升下游修复，只数那些被独立于 \sys 的 oracle 接受的 fix。
+We first run two case studies on \empiricalset: one rejection where the diagnostic recovers the repair information the terminal error omits, and a pair where it separates the responsible layer behind a shared terminal error.
+% 我们先在 \empiricalset 上做两个 case study：一个 rejection 展示 diagnostic 从 terminal message 里恢复出被省略的修复信息，一对 rejection 展示它如何区分一条共享 message 背后的责任 layer。
+We then measure on \bench whether replacing the raw verifier log with the \sys diagnostic raises downstream repair, counting only the fixes that an oracle independent of \sys accepts.
+% 然后我们在 \bench 上测量：把 raw verifier log 换成 \sys diagnostic 是否提升下游修复，只数那些被独立于 \sys 的 oracle 接受的 fix。
 
-\noindent\textbf{Setup.} The two case studies draw on \bench, the 235 reproduced rejections of \S\ref{sec:study:corpus}.
-% 两个 case study 用的是 \bench，也就是 \S\ref{sec:study:corpus} 里那 235 个复现 rejection。
-The repair measurement uses \testset, 75 source-level repair tasks, 40 built around a required verifier proof and 35 minimized from open-source projects such as Cilium~\cite{cilium}, xdp-tools~\cite{xdptools}, and bpftime~\cite{zheng2025extending}.
-% 修复测量用 \testset：75 个源码级修复任务，其中 40 个围绕 verifier proof obligation 构造、35 个从 Cilium、xdp-tools、bpftime 这类开源项目最小化而来。
+\noindent\textbf{Setup.} The two case studies draw on \empiricalset, the 235 reproduced rejections of \S\ref{sec:study:corpus}.
+% 两个 case study 用的是 \empiricalset，也就是 \S\ref{sec:study:corpus} 里那 235 个复现 rejection。
+The repair measurement uses \bench, 75 source-level repair tasks, 40 built around a required verifier proof and 35 minimized from open-source projects such as Cilium~\cite{cilium}, xdp-tools~\cite{xdptools}, and bpftime~\cite{zheng2025extending}.
+% 修复测量用 \bench：75 个源码级修复任务，其中 40 个围绕 verifier proof obligation 构造、35 个从 Cilium、xdp-tools、bpftime 这类开源项目最小化而来。
 Each task ships the buggy program with an executable oracle independent of \sys, which accepts a fix only if it loads through the kernel verifier and passes the case's functional and source-semantics tests.
 % 每个任务都带出错程序和一个独立于 \sys 的可执行 oracle，它只在修复通过内核 verifier 加载、并通过该 case 的功能和源码语义测试时才接受。
 
@@ -78,8 +78,8 @@ On these two rejections, \sys reports a different layer for each, separating a s
 
 The two case studies show that \sys exposes the repair information the terminal verifier message omits.
 % 两个 case study 表明 \sys 暴露了 terminal verifier message 省略掉的修复信息。
-We now test whether that information improves end-to-end repair on \testset.
-% 现在我们测试这些信息是否提升 \testset 上的端到端修复。
+We now test whether that information improves end-to-end repair on \bench.
+% 现在我们测试这些信息是否提升 \bench 上的端到端修复。
 For each task, a model receives the buggy program with either the raw verifier log or the \sys diagnostic and writes a candidate fix for the oracle to judge.
 % 对每个任务，模型拿到出错程序加 raw verifier log 或 \sys diagnostic 之一，写出一个候选 fix 交给 oracle 判定。
 Because the oracle is independent of \sys, a fix earns credit only by passing the same checks a correct program must pass.
@@ -94,8 +94,8 @@ Our primary model is Qwen3.6 27B, and we also run the hosted GLM 5.2 and the sma
 We include the small 3B model to see whether the gain survives at low model capacity.
 % 我们加入小的 3B 模型，看这个提升在低模型容量下是否还在。
 
-Replacing the raw verifier log with the \sys diagnostic raises repair for every model, as shown in Figure~\ref{fig:bpfix-test}.
-% 把 raw verifier log 换成 \sys diagnostic，每个模型的修复都上升，如图~\ref{fig:bpfix-test} 所示。
+Replacing the raw verifier log with the \sys diagnostic raises repair for every model, as shown in Figure~\ref{fig:bpfix-bench}.
+% 把 raw verifier log 换成 \sys diagnostic，每个模型的修复都上升，如图~\ref{fig:bpfix-bench} 所示。
 On Qwen3.6 27B, one-shot repair rises from 22 of 75 cases with the raw log to 38 with the diagnostic, and one retry raises the two counts to 30 and 44.
 % 在 Qwen3.6 27B 上，one-shot 修复从 raw log 的 75 例中 22 升到 diagnostic 的 38，一次重试把两者抬到 30 和 44。
 GLM 5.2 shows the same pattern, from 28 to 38 in one shot and 52 against 47 with the retry.
@@ -105,7 +105,7 @@ The small Qwen2.5 3B repairs none of the 75 from the raw log, and 8 from the dia
 The gain holds across all three models, which points to the diagnostic as its source.
 % 这个提升在三个模型上都成立，说明来源是 diagnostic。
 
-\input{figures/sec-5-bpfix-test}
+\input{figures/sec-5-bpfix-bench}
 
 To locate the gain, we charge each failed one-shot candidate to the first stage it fails: returning a program, compiling, loading through the verifier, passing the functional test, or passing the source-semantics test.
 % 为定位提升来自哪里，我们把每个失败的 one-shot 候选归到它第一个失败的阶段：返回程序、编译、过 verifier 加载、过功能测试、过源码语义测试。

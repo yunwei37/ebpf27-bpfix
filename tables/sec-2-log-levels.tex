@@ -1,6 +1,6 @@
 \begin{table*}[t]
   \centering
-  \caption{The verifier's \texttt{log\_level} is a \texttt{u32} bitmask, not a graded level (\texttt{bpf\_verifier.h:638-644}). Each user-settable bit controls one output dimension and bits combine with bitwise OR; the kernel gates each output with \texttt{\&} and rejects any bit outside the mask with \texttt{-EINVAL} (\texttt{log.c:24}). \emph{bpfix-bench} pins \texttt{level=2}.}
+  \caption{The verifier's \texttt{log\_level} is a \texttt{u32} bitmask, not a graded level (\texttt{bpf\_verifier.h:638-644}). Each user-settable bit controls one output dimension and bits combine with bitwise OR; the kernel gates each output with \texttt{\&} and rejects any bit outside the mask with \texttt{-EINVAL} (\texttt{log.c:24}). \emph{bpfix-empirical} pins \texttt{level=2}.}
   \label{tab:log-levels}
   \small
   \begin{tabular}{@{}l l p{9.2cm} l@{}}
