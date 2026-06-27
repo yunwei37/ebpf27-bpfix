@@ -35,9 +35,8 @@ Localizers in other domains like Rust walk a structure the checker builds, such 
 % 段5: \sys
 We introduce \sys, which reconstructs where the required proof was established and where it was lost from the verifier log.
 % 我们提出 \sys，它通过从 verifier log 重建所需 proof 在哪建立、在哪丢失来弥合这一 gap。
- \sys analyzes these states to report a proof-break witness that localizes the loss (Figure~\ref{fig:overview}).
+and report a proof-break witness that localizes the loss (Figure~\ref{fig:overview}).
 % 在 \texttt{log\_level=2} 下，verifier 在每条指令后打印抽象状态；\sys 分析这些状态，报告一个定位丢失点的 proof-break witness（图~\ref{fig:overview}）。
-
 % 段6: LLM benchmark 结果
 To evaluate whether this localization helps repair, we construct \bench, a benchmark of 75 repair tasks with independent oracles.
 % 为评估这种定位是否有助于修复，我们构建 \bench：一个带独立 oracle 的 75 修复任务 benchmark。
