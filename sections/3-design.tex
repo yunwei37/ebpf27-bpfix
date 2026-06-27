@@ -8,18 +8,14 @@ The goal of \sys is to answer two questions the terminal error leaves open: whic
 % \sys 的目标是回答 terminal error 留下的两个问题：verifier 需要的是哪条 proof，以及程序在哪丢的。
 \sys reconstructs the proof lifecycle from the existing verifier log by parsing the per-instruction abstract states and tracking when evidence for the required proof appears, persists, and is lost.
 % \sys 通过解析这些 logged state、追踪 required proof 的 evidence 何时出现、何时持续、何时丢失，来重建这个生命周期。
-
-We distinguish three locations: the \emph{rejection location}, where the verifier stopped; an observed \emph{loss point}, after which logged evidence no longer supports the proof; and the developer-chosen \emph{repair location}.
-% 我们区分三个位置：rejection location（verifier 停下的地方）、observed loss point（之后 logged evidence 不再支持 proof）、以及开发者选择的 repair location。
-
 Figure~\ref{fig:design-overview} summarizes the three-stage workflow: log analysis normalizes evidence around the rejection, proof reconstruction identifies and tracks the required proof, and diagnostic generation turns the resulting evidence into guidance the developer can act on.
 % 图~\ref{fig:design-overview} 总结了三阶段工作流：log analysis 归一化 rejection 周围的 evidence，proof reconstruction 识别并追踪 required proof，diagnostic generation 把结果 evidence 转为可操作的指引。
 
 \subsection{Architecture and Data Flow}
 \label{sec:design-architecture}
 
-\sys is a pipeline whose only required input is an existing verifier log; optional source or object metadata improves instruction-to-source mapping.
-% \sys 是一个流水线，唯一必需的输入是现有的 verifier log；可选的源码或 object 元数据可改善指令到源码的映射。
+\sys is implemented in approximately 23k lines of Rust as a pipeline whose only required input is an existing verifier log; optional source or object metadata improves instruction-to-source mapping.
+% \sys 用约 23k 行 Rust 实现，是一个流水线，唯一必需的输入是现有的 verifier log；可选的源码或 object 元数据可改善指令到源码的映射。
 The Log Analysis stage extracts the terminal error and the per-instruction abstract states into a normalized evidence stream.
 % Log Analysis 阶段把 terminal error 和逐指令的抽象状态抽取到一条归一化的 evidence 流里。
 The Proof Reconstruction stage maps the terminal error to a proof family (such as pointer provenance, packet bounds, or scalar range), identifies the required proof, and tracks evidence for that proof.
@@ -37,17 +33,17 @@ The result is a Rust-style plain-text diagnostic with a stable error identifier,
 % \sys 首先识别 verifier 需要的是哪条 proof。
 The terminal error identifies the rejected operation and immediate symptom, while nearby abstract state supplies parameters such as the affected register, access offset and size, scalar range, pointer type, or reference identifier.
 % terminal error 标出被拒操作和直接症状，附近的抽象状态提供参数，如受影响的寄存器、访问 offset 和大小、scalar range、指针类型或引用标识符。
-Together they identify the required proof at the rejection location.
-% 二者共同在 rejection location 识别出 required proof。
+Together they identify the required proof at the \emph{rejection location}, the instruction where the verifier stopped.
+% 二者共同在 \emph{rejection location}（verifier 停下的指令）识别出 required proof。
 For example, in Figure~\ref{fig:overview}, \texttt{R5 invalid mem access `scalar'} maps to a pointer-provenance proof.
 % 例如在图~\ref{fig:overview} 中，\texttt{R5 invalid mem access `scalar'} 映到一个指针 provenance proof。
 From the rejected load and nearby state, \sys infers that \texttt{R5} must still carry verifier-recognized packet-pointer provenance when the rejected load reads it.
 % 从被拒的 load 和附近状态，\sys 推断 \texttt{R5} 在被拒 load 读取它时必须仍携带 verifier 认可的 packet 指针 provenance。
 
-Proof-family-specific extraction records three event types: an \emph{establishment event}, where logged evidence explicitly supports the proof; a \emph{loss event}, where a later logged state is incompatible with it; and the \emph{rejection event}, where the verifier requires but cannot establish it.
-% 针对 proof 家族的抽取记录三类事件：establishment event（logged evidence 明确支持该 proof）、loss event（后续 logged state 与之不兼容）、rejection event（verifier 需要但无法建立它）。
-When both a supporting and a later incompatible observation exist, their transition becomes the loss point; otherwise, \sys reports only the required proof and rejection location.
-% 当同时存在支持性和后续不兼容的观测时，它们之间的转换成为 loss point；否则 \sys 仅报告 required proof 和 rejection location。
+\sys then tracks evidence for that proof through the log: when the evidence appears (establishment), when it becomes incompatible (loss), and when the verifier requires it (rejection).
+% 然后 \sys 在 log 中追踪该 proof 的 evidence：evidence 何时出现（establishment）、何时变得不兼容（loss）、何时被 verifier 需要（rejection）。
+When both establishment and loss are observed, the transition between them becomes the loss point.
+% 当 establishment 和 loss 都被观测到时，它们之间的转换成为 loss point。
 
 In the running example, an earlier state represents \texttt{R5} as \texttt{pkt(off=34,r=42)}, whereas a later state before instruction~37 represents it as scalar value \texttt{40}.
 % 在运行示例中，较早的状态把 \texttt{R5} 表示为 \texttt{pkt(off=34,r=42)}，而指令 37 前的较晚状态把它表示为 scalar 值 \texttt{40}。
@@ -65,10 +61,5 @@ When the proof was never established, \sys recommends introducing it, for exampl
 % 当 proof 从未建立时，\sys 建议引入它，例如通过 bounds check、null check 或引用获取。
 When the proof is visible and later lost, it recommends preserving or re-deriving it near the rejected use.
 % 当 proof 可见但后来丢失时，建议在被拒使用点附近保持或重新推导它。
-
-The evidence record also determines localization.
-% evidence 记录也决定定位。
-\sys selects the most informative location as the primary span, reports relevant rejection, establishment, or loss locations as related spans, and states whether each is backed by source mapping, a BPF instruction identifier, or only a log position.
-% \sys 选最有信息量的位置作 primary span，把相关的 rejection、establishment 或 loss 位置报为 related span，并说明各个 span 是由源码映射、BPF 指令标识符还是仅 log 位置支持。
 Developers use the resulting guidance to choose and validate a repair through the normal compile-and-load workflow.
 % 开发者用产出的指引来选择并验证修复，走正常的编译加载流程。
