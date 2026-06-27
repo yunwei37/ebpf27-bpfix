@@ -1,14 +1,14 @@
 \begin{abstract}
-The verifier proves safety one instruction at a time, building the proof that each value is used safely, such as a pointer staying within bounds.
-% verifier 逐条指令地证明安全，为每个值建立"它被安全使用"的 proof，例如某个指针始终在界内。
+The verifier proves safety one instruction at a time, proving each value is used safely, such as a pointer staying within bounds.
+% verifier 逐条指令地证明安全，证明每个值被安全使用，例如某个指针始终在界内。
 When a program is rejected, the verifier returns a log of the per-instruction abstract state, ending in a one-line terminal error that marks where verification stopped.
 % 当程序被拒时，verifier 返回一份记录每条指令处抽象状态的 log，末尾是一行 terminal error，标出 verification 停下来的位置。
 An empirical study of 235 reproduced rejections shows the error cannot identify where the program lost the required proof, as one error covers as many as nine distinct root causes.
 % 一项对 235 个复现 rejection 的实证研究表明，这行 error 判断不出程序在哪丢失了所需的 proof，因为一条 error 最多跨 9 个不同的 root cause。
 Existing tools map the error to a source line, leaving the developer to find where the proof was lost.
 % 现有工具只是把这行错映到一个源码行，丢失的 proof 仍要开发者自己去找。
-We present \sys, which reconstructs where the required proof was established and where it was lost from the per-instruction states in verifier log.
+We present \sys, which reconstructs where the required proof was established and where it was lost from the per-instruction states in the verifier log.
 % 我们提出 \sys：它读 verifier log，重建出所需 proof 在哪建立、在哪丢失。
-We construct an LLM verifier repair benchmark of 75 tasks, where current LLMs achieve 0\% to 37\% one-shot repair success, and \sys improves repair by 11--21pp.
-% 我们构建了一个 75 任务的 LLM verifier 修复 benchmark，当前 LLM 的 one-shot 修复最高达 37\%，\sys 提升 13--21 个百分点。
+We construct a benchmark of 75 LLM verifier rejection repair tasks, where current LLMs achieve 0\% to 37\% one-shot success, and \sys improves repair by 11--21pp.
+% 我们构建了一个 75 个 LLM verifier rejection 修复任务的 benchmark，当前 LLM 的 one-shot 成功率为 0--37\%，\sys 提升 11--21 个百分点。
 \end{abstract}

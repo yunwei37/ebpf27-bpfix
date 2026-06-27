@@ -33,8 +33,8 @@ Localizers in other domains like Rust walk a structure the checker builds, such 
 % 其他领域的定位器走 checker 构建的结构（如 AST 或 typing constraints），而 eBPF verifier 不暴露这类制品。
 
 % 段5: \sys
-We introduce \sys, which reconstructs where the required proof was established and where it was lost from the verifier log, and reports a proof-break witness that localizes the loss (Figure~\ref{fig:overview}).
-% 我们提出 \sys，它从 verifier log 重建所需 proof 在哪建立、在哪丢失，并报告一个定位丢失点的 proof-break witness（图~\ref{fig:overview}）。
+We introduce \sys, which reconstructs where the required proof was established and where it was lost from the verifier log and print a Rust-like diagnostic (Figure~\ref{fig:overview}).
+% 我们提出 \sys，它从 verifier log 重建所需 proof 在哪建立、在哪丢失，并打印类似 Rust 的诊断信息（图~\ref{fig:overview}）。
 
 % 段6: LLM benchmark 结果
 To evaluate whether this localization helps repair, we construct \bench, a benchmark of 75 repair tasks with independent tests.
@@ -50,8 +50,8 @@ This paper makes the following contributions:
 \begin{itemize}
 \item An empirical study of 235 reproduced rejections showing the terminal error reports where verification stopped, leaving the developer to find where the proof was lost~(\S\ref{sec:study}).
 % 一项对 235 个复现 rejection 的实证研究，表明 terminal error 报告的是 verification 停下的位置，开发者需自己找 proof 在哪丢的（见第 2 节）。
-\item \sys, a technique that reconstructs the required proof's lifecycle from the verifier log and reports a proof-break witness~(\S\ref{sec:design}).
-% \sys：一种从 verifier log 重建 required proof 生命周期、报告 proof-break witness 的技术（见第 3 节）。
+\item \sys, a technique that reconstructs where the required proof was established and lost from the verifier log~(\S\ref{sec:design}).
+% \sys：一种从 verifier log 重建所需 proof 在哪建立、在哪丢失的技术（见第 3 节）。
 \item \bench, a benchmark of 75 repair tasks with independent tests for evaluating LLM-based verifier repair~(\S\ref{sec:evaluation}).
 % \bench：一个带独立测试的 75 修复任务 benchmark，用于评估基于 LLM 的 verifier 修复（见第 4 节）。
 \end{itemize}
