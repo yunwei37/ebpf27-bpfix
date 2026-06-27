@@ -1,9 +1,9 @@
 \begin{abstract}
 eBPF lets developers run custom programs inside the Linux kernel, but a static verifier must prove each program safe before it loads.
 % eBPF 让开发者在 Linux 内核里运行自定义程序，但静态 verifier 必须在加载前证明每个程序安全。
-When the verifier rejects a program, the unclear terminal error makes repair challenging: 47\% of rejections return only \texttt{EINVAL}, and one error string maps to as many as nine distinct root causes.
-% 当 verifier 拒绝程序时，不清晰的 terminal error 使修复困难：47\% 的 rejection 只返回 \texttt{EINVAL}，一个 error 字符串最多对应 9 种不同的 root cause。
-An empirical study of 235 reproduced rejections shows that 10 of 12 root causes are eBPF-specific, so repair requires domain knowledge beyond general programming.
+However, when the verifier rejects a program, the unclear error makes repair challenging.
+% 当 verifier 拒绝程序时，不清晰的 error 使修复困难：47\% 的 rejection 只返回 \texttt{EINVAL}，一个 error 字符串最多对应 9 种不同的 root cause。
+We conduct an empirical study of 235 reproduced rejections, showing that 47\% of rejections return only \texttt{EINVAL}, and one error string maps to as many as nine distinct root causes. 10 of 12 root causes are eBPF-specific, so repair requires domain knowledge beyond general programming.
 % 一项对 235 个复现 rejection 的实证研究表明，12 类 root cause 中 10 类是 eBPF 特有的，因此修复需要超越通用编程的领域知识。
 Existing tools help developers read the error, but none locates where the required proof was lost.
 % 现有工具帮助开发者阅读 error，但没有一个能定位所需 proof 在哪丢失。
