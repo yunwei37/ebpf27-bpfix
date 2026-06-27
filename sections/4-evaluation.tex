@@ -5,15 +5,15 @@ This section evaluates the \sys diagnostic with two case studies and a repair me
 % 本节用两个 case study 和一个修复测量来评估 \sys 的 diagnostic。
 We first run two case studies on \empiricalset: one rejection where the diagnostic recovers the repair information the terminal error omits, and a pair where it separates the responsible layer behind a shared terminal error.
 % 我们先在 \empiricalset 上做两个 case study：一个 rejection 展示 diagnostic 从 terminal message 里恢复出被省略的修复信息，一对 rejection 展示它如何区分一条共享 message 背后的责任 layer。
-We then measure on \bench whether replacing the raw verifier log with the \sys diagnostic raises downstream repair, counting only the fixes that an oracle independent of \sys accepts.
-% 然后我们在 \bench 上测量：把 raw verifier log 换成 \sys diagnostic 是否提升下游修复，只数那些被独立于 \sys 的 oracle 接受的 fix。
+We then measure on \bench whether replacing the raw verifier log with the \sys diagnostic raises downstream repair, counting only the fixes that pass tests independent of \sys.
+% 然后我们在 \bench 上测量：把 raw verifier log 换成 \sys diagnostic 是否提升下游修复，只数那些通过独立于 \sys 的测试的 fix。
 
 \noindent\textbf{Setup.} The two case studies draw on \empiricalset, the 235 reproduced rejections of \S\ref{sec:study:corpus}.
 % 两个 case study 用的是 \empiricalset，也就是 \S\ref{sec:study:corpus} 里那 235 个复现 rejection。
 The repair measurement uses \bench, 75 source-level repair tasks, 40 built around a required verifier proof and 35 minimized from open-source projects such as Cilium~\cite{cilium}, xdp-tools~\cite{xdptools}, and bpftime~\cite{zheng2025extending}.
 % 修复测量用 \bench：75 个源码级修复任务，其中 40 个围绕 verifier proof obligation 构造、35 个从 Cilium、xdp-tools、bpftime 这类开源项目最小化而来。
-Each task ships the buggy program with an executable oracle independent of \sys, which accepts a fix only if it loads through the kernel verifier and passes the case's functional and source-semantics tests.
-% 每个任务都带出错程序和一个独立于 \sys 的可执行 oracle，它只在修复通过内核 verifier 加载、并通过该 case 的功能和源码语义测试时才接受。
+Each task ships the buggy program with an executable test suite independent of \sys, which accepts a fix only if it loads through the kernel verifier and passes the case's functional and source-semantics checks.
+% 每个任务都带出错程序和一个独立于 \sys 的可执行测试套件，它只在修复通过内核 verifier 加载、并通过该 case 的功能和源码语义检查时才接受。
 
 \subsection{Recovering the Missing Repair Information}
 \label{sec:eval-diagnostic-completeness}
@@ -80,10 +80,10 @@ The two case studies show that \sys exposes the repair information the terminal 
 % 两个 case study 表明 \sys 暴露了 terminal verifier message 省略掉的修复信息。
 We now test whether that information improves end-to-end repair on \bench.
 % 现在我们测试这些信息是否提升 \bench 上的端到端修复。
-For each task, a model receives the buggy program with either the raw verifier log or the \sys diagnostic and writes a candidate fix for the oracle to judge.
-% 对每个任务，模型拿到出错程序加 raw verifier log 或 \sys diagnostic 之一，写出一个候选 fix 交给 oracle 判定。
-Because the oracle is independent of \sys, a fix earns credit only by passing the same checks a correct program must pass.
-% 因为 oracle 独立于 \sys，一个 fix 只有通过一个正确程序同样要过的那些检查才算数。
+For each task, a model receives the buggy program with either the raw verifier log or the \sys diagnostic and writes a candidate fix for the test suite to judge.
+% 对每个任务，模型拿到出错程序加 raw verifier log 或 \sys diagnostic 之一，写出一个候选 fix 交给测试套件判定。
+Because the tests are independent of \sys, a fix earns credit only by passing the same checks a correct program must pass.
+% 因为测试独立于 \sys，一个 fix 只有通过一个正确程序同样要过的那些检查才算数。
 
 We score each task in two modes.
 % 我们用两种模式给每个任务打分。
