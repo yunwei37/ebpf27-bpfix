@@ -3,8 +3,8 @@
 
 A rejection confronts the developer with a low-level log, and this section studies what that log records about real rejections and where it falls short.
 % 被拒时开发者面对的是一份低层 log，本节研究这份 log 记录了真实 rejection 的什么，又在哪里不够用。
-We describe how a developer reads a rejection (\S\ref{sec:study:verifier}), assemble \empiricalset, a corpus of real rejections (\S\ref{sec:study:corpus}), characterize the rejections in it (\S\ref{sec:study:bugs}), and measure the log's localization gap (\S\ref{sec:study:gap}).
-% 我们讲开发者怎么读一个 rejection（\S\ref{sec:study:verifier}）、构建真实 rejection 语料 \empiricalset（\S\ref{sec:study:corpus}）、刻画其中的 rejection（\S\ref{sec:study:bugs}），并度量这份 log 的定位 gap（\S\ref{sec:study:gap}）。
+We describe how a developer reads a rejection (\S\ref{sec:study:verifier}), assemble \empiricalset, a dataset of real rejections (\S\ref{sec:study:corpus}), characterize the rejections in it (\S\ref{sec:study:bugs}), and measure the log's localization gap (\S\ref{sec:study:gap}).
+% 我们讲开发者怎么读一个 rejection（\S\ref{sec:study:verifier}）、构建真实 rejection 数据集 \empiricalset（\S\ref{sec:study:corpus}）、刻画其中的 rejection（\S\ref{sec:study:bugs}），并度量这份 log 的定位 gap（\S\ref{sec:study:gap}）。
 
 \subsection{Reading a Rejection from the Verifier Log}
 \label{sec:study:verifier}
@@ -28,10 +28,10 @@ The error names only the operation that needed the proof, so the developer recon
 \subsection{Reproducing Real Rejections in \empiricalset}
 \label{sec:study:corpus}
 
-To study rejections that developers actually hit, we assemble \empiricalset, a corpus of real verifier rejections reproduced under one fixed toolchain.
-% 为研究开发者真正会遇到的 rejection，我们构建 \empiricalset：一份在固定 toolchain 下复现的真实 verifier rejection 语料。
-The corpus draws on 936 candidate reports from four sources: Stack Overflow questions, GitHub issues, GitHub fix commits, and kernel selftests.
-% 语料取自四个来源的 936 个候选报告：Stack Overflow 提问、GitHub issue、GitHub 修复 commit、内核 selftest。
+To study rejections that developers actually hit, we assemble \empiricalset, a dataset of real verifier rejections reproduced under one fixed toolchain.
+% 为研究开发者真正会遇到的 rejection，我们构建 \empiricalset：一份在固定 toolchain 下复现的真实 verifier rejection 数据集。
+The dataset draws on 936 candidate reports from four sources: Stack Overflow questions, GitHub issues, GitHub fix commits, and kernel selftests.
+% 数据集取自四个来源的 936 个候选报告：Stack Overflow 提问、GitHub issue、GitHub 修复 commit、内核 selftest。
 We rebuild each candidate and load it into kernel 6.15.11 with clang 18 at log level 2, and 235 of the 936 reject under this build and form \empiricalset.
 % 我们重建每个候选并加载进 kernel 6.15.11 + clang 18（log level 2），936 个里有 235 个在这套 build 下被拒，构成 \empiricalset。
 The rest are dropped because they do not reject under our toolchain, need a specific environment, or lack the source to rebuild.
