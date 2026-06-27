@@ -4,9 +4,9 @@ eBPF lets developers run custom programs inside the Linux kernel, where a verifi
 However, when the verifier rejects a program, the unclear error makes repair challenging: the error reports where verification stopped, not where the program lost the proof the verifier required.
 % 当 verifier 拒绝程序时，不清晰的 error 使修复困难：error 报告的是 verification 停下的位置，而非程序丢失 verifier 所需 proof 的位置。
 To quantify this gap, we conduct an empirical study of 235 reproduced rejections, showing that 47\% of rejections return only \texttt{EINVAL}, one error string maps to as many as nine distinct root causes, and 10 of the 12 root causes are eBPF-specific. Repair thus requires both domain knowledge and locating where the proof was lost, yet existing tools only help developers read the error.
-% 为量化这一 gap，我们对 235 个复现 rejection 进行实证研究，发现 47\% 的 rejection 只返回 \texttt{EINVAL}，一个 error 字符串最多对应 9 种不同 root cause，且 12 类 root cause 中 10 类是 eBPF 特有的。因此修复需要领域知识和定位 proof 在哪丢失，而现有工具帮助开发者阅读 error 但不定位丢失点。
+% 为量化这一 gap，我们对 235 个复现 rejection 进行实证研究，发现 47\% 的 rejection 只返回 \texttt{EINVAL}，一个 error 字符串最多对应 9 种不同 root cause，且 12 类 root cause 中 10 类是 eBPF 特有的。因此修复需要领域知识和定位 proof 在哪丢失，而现有工具仅仅帮助开发者阅读 error。
 We present \sys, which reconstructs where the required proof was established and where it was lost from the verifier log, and prints a Rust-like diagnostic.
-% 我们提出 \sys，它从 verifier log 重建所需 proof 在哪建立、在哪丢失。
+% 我们提出 \sys，它从 verifier log 重建所需 proof 在哪建立、在哪丢失，并打印类似 Rust 的诊断信息。
 To evaluate \sys and the ability of LLMs to help repair, we construct a benchmark of 75 LLM repair tasks. Current models achieve 0--37\% one-shot success with the raw log, and replacing the log with the \sys localization improves repair by 11--21pp, suggesting that locating where the proof was lost is key to guiding repair.
 % 为评估 \sys，我们构建了一个 75 个 LLM 修复任务的 benchmark。当前模型用 raw log 的 one-shot 成功率为 0--37\%，换成 \sys 的定位后提升 11--21 个百分点，说明定位 proof 在哪丢失是引导修复的关键。
 \end{abstract}
