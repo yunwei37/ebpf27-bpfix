@@ -33,9 +33,9 @@ Localizers in other domains like Rust walk a structure the checker builds, such 
 % 其他领域的定位器走 checker 构建的结构（如 AST 或 typing constraints），而 eBPF verifier 不暴露这类制品。
 
 % 段5: \sys
-\sys closes this gap by reconstructing where the required proof was established and where it was lost from the verifier log.
-% \sys 通过从 verifier log 重建所需 proof 在哪建立、在哪丢失来弥合这一 gap。
-Under \texttt{log\_level=2}, the verifier prints its abstract state after every instruction~\cite{linuxkernel-bpf-verifier}; \sys analyzes these states to report a proof-break witness that localizes the loss (Figure~\ref{fig:overview}).
+We introduce \sys, which reconstructs where the required proof was established and where it was lost from the verifier log.
+% 我们提出 \sys，它通过从 verifier log 重建所需 proof 在哪建立、在哪丢失来弥合这一 gap。
+ \sys analyzes these states to report a proof-break witness that localizes the loss (Figure~\ref{fig:overview}).
 % 在 \texttt{log\_level=2} 下，verifier 在每条指令后打印抽象状态；\sys 分析这些状态，报告一个定位丢失点的 proof-break witness（图~\ref{fig:overview}）。
 
 % 段6: LLM benchmark 结果
