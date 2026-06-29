@@ -58,7 +58,7 @@ The repair is a compiler flag that leaves the source untouched (Figure~\ref{fig:
 The rest of this subsection examines the 191 program bugs.
 % 本小节其余部分考察这 191 个程序 bug。
 
-\input{figures/sec-2-packet}
+
 
 A program bug fails a safety check, but the failed check does not name the source mistake.
 % 一个程序 bug 没通过某个安全检查，但这个失败的检查并不点出源码错误。
@@ -106,3 +106,4 @@ Under \texttt{log\_level=2} the verifier prints its abstract state after every i
 \textbf{Takeaway \#2:} The terminal error is too coarse to guide repair: 47\% of rejections return \texttt{EINVAL}, and one error string maps to as many as nine root causes.
 % \textbf{要点 \#2：}terminal error 太粗，无法指导修复：47\% 的 rejection 返回 \texttt{EINVAL}，一个 error 字符串最多对应 9 种 root cause。
 \end{tcolorbox}
+
