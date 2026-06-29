@@ -37,7 +37,7 @@
         <mxCell id="GkoSsiDz95WLE7ecwEy_-24" value="Verifier Log" style="text;html=1;align=center;verticalAlign=middle;whiteSpace=wrap;rounded=0;fontSize=11;" vertex="1" parent="1">
           <mxGeometry x="390" y="476" width="70" height="30" as="geometry" />
         </mxCell>
-        <mxCell id="GkoSsiDz95WLE7ecwEy_-26" value="BPFix" style="rounded=1;whiteSpace=wrap;html=1;fontSize=11;" vertex="1" parent="1">
+        <mxCell id="GkoSsiDz95WLE7ecwEy_-26" value="bpfix" style="rounded=1;whiteSpace=wrap;html=1;fontSize=11;" vertex="1" parent="1">
           <mxGeometry x="385" y="360" width="80" height="40" as="geometry" />
         </mxCell>
         <mxCell id="GkoSsiDz95WLE7ecwEy_-27" value="" style="endArrow=blockThin;html=1;rounded=0;endFill=1;strokeWidth=2;" edge="1" parent="1">

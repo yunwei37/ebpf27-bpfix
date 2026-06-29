@@ -9,4 +9,6 @@ We present \sys, which reconstructs where the required proof was established and
 % 我们提出 \sys，它从 verifier log 重建所需 proof 在哪建立、在哪丢失，并打印类似 Rust 的诊断信息。
 To evaluate \sys and the ability of LLMs to help repair, we construct a benchmark of 75 LLM repair tasks. Current models achieve 0--37\% one-shot success with the raw log, and replacing the log with the \sys localization improves repair by 11--21pp, suggesting that locating where the proof was lost is key to guiding repair.
 % 为评估 \sys，我们构建了一个 75 个 LLM 修复任务的 benchmark。当前模型用 raw log 的 one-shot 成功率为 0--37\%，换成 \sys 的定位后提升 11--21 个百分点，说明定位 proof 在哪丢失是引导修复的关键。
+bpfix is available at \url{https://github.com/eunomia-bpf/bpfix}.
+% bpfix 位于 \url{https://github.com/eunomia-bpf/bpfix}。
 \end{abstract}

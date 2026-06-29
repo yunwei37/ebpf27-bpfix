@@ -55,9 +55,9 @@ def annotate(ax, bar, value, rank):
 def draw_grouped(ax):
     groups = [
         ("Raw\n1 try", "one_shot", "raw"),
-        ("BPFix\n1 try", "one_shot", "bpfix"),
+        ("bpfix\n1 try", "one_shot", "bpfix"),
         ("Raw\nretry", "retry", "raw"),
-        ("BPFix\nretry", "retry", "bpfix"),
+        ("bpfix\nretry", "retry", "bpfix"),
     ]
     width = 0.20
     offsets = [-width, 0, width]
