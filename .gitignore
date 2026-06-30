@@ -1,0 +1,32 @@
+# LaTeX intermediate files
+*.aux
+*.bbl
+*.blg
+*.fdb_latexmk
+*.fls
+*.log
+*.out
+*.synctex.gz
+*.toc
+*.lof
+*.lot
+*.nav
+*.snm
+*.vrb
+*.bcf
+*.run.xml
+
+# Generated PDF (optional - uncomment if you want to track it)
+# *.pdf
+
+# arXiv submission
+arxiv-submission/
+arxiv-submission.tar.gz
+
+# Editor files
+*.swp
+*~
+.DS_Store
+
+# latexmk
+*.latexmk
