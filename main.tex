@@ -128,7 +128,7 @@
 %% Of note is the shared affiliation of the first two authors, and the
 %% "authornote" and "authornotemark" commands
 %% used to denote shared contribution to the research.
-\author{Yusheng Zheng$^{1,2}$, Zhengjie Ji$^{3}$, Weichen Tao$^{4}$, Xiangyu Gao$^{5}$, Jianchang Su$^{6}$, Wei Zhang$^{6}$, Andi Quinn$^{1}$, Dan Williams$^{3}$}
+\author{Yusheng Zheng$^{*1,2}$, Zhengjie Ji$^{*3}$, Weichen Tao$^{*4}$, Xiangyu Gao$^{5}$, Jianchang Su$^{6}$, Wei Zhang$^{6}$, Andi Quinn$^{1}$, Dan Williams$^{3}$}
 \affiliation{%
   \institution{$^{1}$UC Santa Cruz \quad $^{2}$eunomia-bpf \quad $^{3}$Virginia Tech \quad $^{4}$Telecom Paris \quad $^{5}$University of Washington \quad $^{6}$University of Connecticut}
   \country{}}
@@ -199,6 +199,10 @@
 
 \settopmatter{printfolios=true,printacmref=false}
 \maketitle
+\begingroup
+\renewcommand\thefootnote{}\footnotetext{$^{*}$Equal contribution.}%
+\addtocounter{footnote}{-1}%
+\endgroup
 \pagestyle{plain}
 
 \input{sections/1-introduction}
